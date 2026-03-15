@@ -22,7 +22,7 @@ const sendEmail = async (options) => {
 
   // 3. Define email options
   const mailOptions = {
-    from: "Your App Name <your.email@gmail.com>",
+    from: "ProManage Bot <your.email@gmail.com>",
     to: options.email,
     subject: options.subject,
     text: options.message,
