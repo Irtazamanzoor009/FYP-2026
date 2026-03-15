@@ -13,13 +13,13 @@ import VerifyOTP from './pages/Auth/VerifyOTP';
 import ForgotPassword from './pages/Auth/ForgotPassword';
 import ResetPassword from './pages/Auth/ResetPassword';
 import JiraConnect from './pages/Auth/JiraConnect';
-import Dashboard from './pages/Dashboard';
+// import Dashboard from './pages/Dashboard';
 import NotFound from './pages/Auth/NotFound';
 import GoogleCallback from './pages/Auth/GoogleCallback';
 
-import DashboardLayout from './pages/dashboard/DashboardLayout';
-import Overview from './pages/dashboard/Overview';
-import SuggestionsBoard from './pages/dashboard/SuggestionsBoard';
+import DashboardLayout from './pages/Dashboard/DashboardLayout';
+import Overview from './pages/Dashboard/Overview';
+import SuggestionsBoard from './pages/Dashboard/SuggestionsBoard';
 import RiskAnalytics from './pages/Dashboard/RiskAnalytics';
 import DecisionHistory from './pages/Dashboard/DecisionHistory';
 import Monitoring from './pages/Dashboard/Monitoring';
