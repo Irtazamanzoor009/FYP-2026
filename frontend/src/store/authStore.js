@@ -126,6 +126,16 @@ const useAuthStore = create((set) => ({
             return { success: false, message: errorMessage };
         }
     },
+
+    logout: async () => {
+        try {
+            await API.post('/auth/logout');
+            set({ user: null, isAuthenticated: false });
+            return { success: true };
+        } catch (error) {
+            return { success: false };
+        }
+    },
 }));
 
 export default useAuthStore;

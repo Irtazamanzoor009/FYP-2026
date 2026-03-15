@@ -17,6 +17,13 @@ import Dashboard from './pages/Dashboard';
 import NotFound from './pages/Auth/NotFound';
 import GoogleCallback from './pages/Auth/GoogleCallback';
 
+import DashboardLayout from './pages/dashboard/DashboardLayout';
+import Overview from './pages/dashboard/Overview';
+import SuggestionsBoard from './pages/dashboard/SuggestionsBoard';
+import RiskAnalytics from './pages/Dashboard/RiskAnalytics';
+import DecisionHistory from './pages/Dashboard/DecisionHistory';
+import Monitoring from './pages/Dashboard/Monitoring';
+
 function App() {
   const { checkAuth, isCheckingAuth } = useAuthStore();
 
@@ -44,9 +51,19 @@ function App() {
 
         <Route element={<ProtectedRoutes />}>
           <Route path="/jira-connect" element={<JiraConnect />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          {/* <Route path="/dashboard" element={<Dashboard />} /> */}
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<Overview />} />
+            <Route path="suggestions" element={<SuggestionsBoard />} />
+            <Route path="risks" element={<RiskAnalytics />} />
+            <Route path="history" element={<DecisionHistory />} />
+            <Route path="monitoring" element={<Monitoring />} />
+            <Route path="settings" element={<div className="p-8">User Settings (Dummy)</div>} />
+          </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>
+
+
 
         <Route path="*" element={<NotFound />} />
 

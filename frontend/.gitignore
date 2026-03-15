@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 .env
+other.txt
+guidlines.md
