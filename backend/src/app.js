@@ -6,6 +6,7 @@ const errorHandler = require("./middleware/errorHandler");
 const loggerMiddleware = require("./middleware/loggerMiddleware");
 
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.get("/api/health", (req, res) => {
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

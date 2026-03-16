@@ -25,7 +25,12 @@ const GoogleCallback = () => {
                     const result = await googleSignIn(code);
                     if (result.success) {
                         toast.success("Welcome back!", { id: toastId });
-                        navigate('/dashboard');
+                        const user = result.user;
+                        if (user?.jiraDomain && user?.jiraApiToken) {
+                            navigate('/dashboard');
+                        } else {
+                            navigate('/jira-connect');
+                        }
                     } else {
                         toast.error(result.message || "Google auth failed.", { id: toastId });
                         navigate('/login');

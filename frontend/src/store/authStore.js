@@ -59,7 +59,7 @@ const useAuthStore = create((set) => ({
         try {
             const res = await API.post('/auth/login', values);
             set({ user: res.data.data, isAuthenticated: true, isLoading: false });
-            return { success: true };
+            return { success: true, user: res.data.data };
         } catch (error) {
             set({ isLoading: false });
             const errorData = error.response?.data;
@@ -118,7 +118,7 @@ const useAuthStore = create((set) => ({
 
             set({ user: loggedInUser, isAuthenticated: true, loading: false });
 
-            return { success: true };
+            return { success: true, user: loggedInUser };
 
         } catch (error) {
             set({ isLoading: false });
@@ -136,6 +136,61 @@ const useAuthStore = create((set) => ({
             return { success: false };
         }
     },
+
+    updateProfile: async (data) => {
+        set({ isLoading: true });
+        try {
+            const res = await API.patch('/user/update-profile', data);
+            set({ user: res.data.data, isLoading: false });
+            return { success: true };
+        } catch (error) {
+            set({ isLoading: false });
+            return { success: false, message: error.response?.data?.message };
+        }
+    },
+
+    uploadAvatar: async (file) => {
+        set({ isLoading: true });
+        try {
+            const formData = new FormData();
+            formData.append('avatar', file);
+            const res = await API.post('/user/upload-avatar', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            set({ user: res.data.data, isLoading: false });
+            return { success: true };
+        } catch (error) {
+            set({ isLoading: false });
+            return { success: false };
+        }
+    },
+
+    changePassword: async (values) => {
+        set({ isLoading: true });
+        try {
+            await API.post('/user/change-password', values);
+            set({ isLoading: false });
+            return { success: true };
+        } catch (error) {
+            set({ isLoading: false });
+            return { success: false, message: error.response?.data?.message };
+        }
+    },
+
+    setPassword: async (password) => {
+        set({ isLoading: true });
+        try {
+            await API.post('/user/set-password', { password });
+            set((state) => ({
+                user: { ...state.user, hasPassword: true },
+                isLoading: false
+            }));
+            return { success: true };
+        } catch (error) {
+            set({ isLoading: false });
+            return { success: false, message: error.response?.data?.message };
+        }
+    }
 }));
 
 export default useAuthStore;

@@ -23,6 +23,7 @@ import SuggestionsBoard from './pages/Dashboard/SuggestionsBoard';
 import RiskAnalytics from './pages/Dashboard/RiskAnalytics';
 import DecisionHistory from './pages/Dashboard/DecisionHistory';
 import Monitoring from './pages/Dashboard/Monitoring';
+import Settings from './pages/Dashboard/Settings';
 
 function App() {
   const { checkAuth, isCheckingAuth } = useAuthStore();
@@ -58,7 +59,7 @@ function App() {
             <Route path="risks" element={<RiskAnalytics />} />
             <Route path="history" element={<DecisionHistory />} />
             <Route path="monitoring" element={<Monitoring />} />
-            <Route path="settings" element={<div className="p-8">User Settings (Dummy)</div>} />
+            <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>

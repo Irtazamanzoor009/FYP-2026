@@ -26,8 +26,14 @@ const Login = () => {
 
             if (res.success) {
                 toast.success("Welcome back!");
-                navigate('/jira-connect');
-            } else {
+                const user = res.user;
+                if (user?.jiraDomain && user?.jiraApiToken) {
+                    navigate('/dashboard');
+                } else {
+                    navigate('/jira-connect');
+                }
+            }
+            else {
                 if (res.requiresOTP && res.userId) {
                     toast.error(res.message);
                     navigate('/verify-otp', { state: { userId: res.userId } });
@@ -40,7 +46,7 @@ const Login = () => {
 
     const handleGoogleLogin = useGoogleLogin({
         flow: "auth-code",
-        ux_mode: 'redirect', 
+        ux_mode: 'redirect',
         redirect_uri: import.meta.env.VITE_GOOGLE_REDIRECT_URI,
     });
 

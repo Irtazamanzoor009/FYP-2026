@@ -5,6 +5,7 @@ import {
     LogOut, Settings2, Bot, X, Sparkles
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import LogoutModal from '../../components/LogoutModal';
 
 const menuItems = [
     { name: 'Overview', icon: LayoutDashboard, path: '/dashboard' },
@@ -17,7 +18,12 @@ const menuItems = [
 const Sidebar = ({ isOpen, toggleSidebar, toggleChat }) => {
     const { user, logout } = useAuthStore();
     const navigate = useNavigate();
+
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+    const getInitials = (name) =>
+        name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
 
     const handleLogout = async () => {
         await logout();
@@ -26,6 +32,21 @@ const Sidebar = ({ isOpen, toggleSidebar, toggleChat }) => {
 
     return (
         <>
+            {/* Outside Click Overlay for Profile Drawer */}
+            {isProfileOpen && (
+                <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsProfileOpen(false)}
+                />
+            )}
+
+            {/* Logout Modal */}
+            <LogoutModal
+                isOpen={showLogoutModal}
+                onClose={() => setShowLogoutModal(false)}
+                onConfirm={handleLogout}
+            />
+
             {/* Mobile Overlay */}
             {isOpen && (
                 <div
@@ -89,17 +110,26 @@ const Sidebar = ({ isOpen, toggleSidebar, toggleChat }) => {
                 </nav>
 
                 {/* Profile Section */}
-                <div className="p-4 border-t border-[#34495e] relative">
+                <div className=" p-4 border-t border-[#34495e] relative">
 
                     {isProfileOpen && (
-                        <div className="absolute bottom-20 left-4 right-4 bg-white rounded-xl shadow-2xl p-2 text-[#2c3e50] animate-in fade-in slide-in-from-bottom-2">
-                            <button className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 rounded-lg text-sm transition-all text-left">
+                        <div className="absolute bottom-20 left-4 right-4 bg-white rounded-xl shadow-2xl p-2 text-[#2c3e50] animate-in fade-in slide-in-from-bottom-2 z-50">
+                            <button
+                                onClick={() => {
+                                    navigate('/dashboard/settings');
+                                    setIsProfileOpen(false);
+                                }}
+                                className="cursor-pointer w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 rounded-lg text-sm transition-all text-left"
+                            >
                                 <Settings2 size={16} /> Settings
                             </button>
 
                             <button
-                                onClick={handleLogout}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 text-red-600 rounded-lg text-sm font-semibold transition-all text-left"
+                                onClick={() => {
+                                    setShowLogoutModal(true);
+                                    setIsProfileOpen(false);
+                                }}
+                                className="cursor-pointer w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 text-red-600 rounded-lg text-sm font-semibold transition-all text-left"
                             >
                                 <LogOut size={16} /> Logout
                             </button>
@@ -108,12 +138,21 @@ const Sidebar = ({ isOpen, toggleSidebar, toggleChat }) => {
 
                     <button
                         onClick={() => setIsProfileOpen(!isProfileOpen)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-[#34495e] ${isProfileOpen ? 'bg-[#34495e]' : ''
+                        className={`cursor-pointer w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-[#34495e] ${isProfileOpen ? 'bg-[#34495e]' : ''
                             }`}
                     >
-                        <div className="w-10 h-10 rounded-full bg-[#18bc9c] flex items-center justify-center font-bold text-lg border-2 border-[#34495e]">
-                            {user?.name?.charAt(0).toUpperCase() || 'U'}
-                        </div>
+
+                        {user?.profilePic ? (
+                            <img
+                                src={user.profilePic}
+                                className="w-10 h-10 rounded-full object-cover border-2 border-[#18bc9c]"
+                                alt="Profile"
+                            />
+                        ) : (
+                            <div className="w-10 h-10 rounded-full bg-[#18bc9c] flex items-center justify-center font-bold text-lg border-2 border-[#34495e]">
+                                {getInitials(user?.name)}
+                            </div>
+                        )}
 
                         <div className="text-left overflow-hidden">
                             <p className="text-sm font-bold truncate">{user?.name || 'Manager'}</p>
