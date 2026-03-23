@@ -58,3 +58,7 @@ jest-test-results.json
 # yarn.lock
 # package-lock.json
 # pnpm-lock.yaml
+
+test.js
+others
+

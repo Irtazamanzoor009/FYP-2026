@@ -9,6 +9,10 @@ const useAuthStore = create((set) => ({
     pendingUserId: null, // Used to pass ID from signup to OTP
     isCheckingAuth: true,
 
+    projects: [],
+    selectedProject: null,
+    isSyncing: false,
+
     checkAuth: async () => {
         try {
             const res = await API.get('/auth/check');
@@ -190,7 +194,47 @@ const useAuthStore = create((set) => ({
             set({ isLoading: false });
             return { success: false, message: error.response?.data?.message };
         }
-    }
+    },
+
+
+    fetchJiraProjects: async () => {
+        set({ isLoading: true });
+        try {
+            // This will call your future backend API that talks to Jira
+            // const res = await API.get('/jira/projects');
+            // For now, dummy data:
+            const dummyProjects = [
+                { id: '101', name: 'Website Redesign', key: 'WEB' },
+                { id: '102', name: 'Mobile App Dev', key: 'MOB' },
+                { id: '103', name: 'Marketing Portal', key: 'MKT' },
+            ];
+            set({ projects: dummyProjects, selectedProject: dummyProjects[0], isLoading: false });
+        } catch (error) {
+            set({ isLoading: false });
+        }
+    },
+
+    setSelectedProject: (project) => {
+        set({ selectedProject: project });
+    },
+
+    syncJiraData: async () => {
+        set({ isSyncing: true });
+        try {
+            const currentProject = get().selectedProject;
+            // API call to trigger backend agentic analysis for the selected project
+            // await API.post(`/jira/sync/${currentProject.id}`);
+
+            // Artificial delay to show the animation
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            set({ isSyncing: false });
+            return { success: true };
+        } catch (error) {
+            set({ isSyncing: false });
+            return { success: false };
+        }
+    },
 }));
 
 export default useAuthStore;
