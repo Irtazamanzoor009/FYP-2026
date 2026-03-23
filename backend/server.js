@@ -1,24 +1,33 @@
 require('dotenv').config();
+const http = require('http');
 const app = require('./src/app');
 const connectDB = require('./src/config/database');
+const { initSocket } = require('./src/config/socket');
+const { log, error } = require('./src/utils/logger');
 // const { scheduleCronJobs } = require('./jobs');
-const { log, error } = require("./src/utils/logger")
 
 const PORT = process.env.PORT || 8000;
 
 (async () => {
-  try {
-    await connectDB();
-    log('✅ Database connected');
+    try {
+        await connectDB();
+        log('✅ Database connected');
 
-    // scheduleCronJobs();
-    // log('⚙️  Cron jobs scheduled')
+        // Create HTTP server from express app
+        const server = http.createServer(app);
 
-    app.listen(PORT, () => {
-      log(`🚀 Server running at http://localhost:${PORT}`);
-    });
-  } catch (err) {
-    error('❌ Server startup failed:', err);
-    process.exit(1);
-  }
+        // Initialize Socket.io on same server
+        initSocket(server);
+
+        // scheduleCronJobs();
+        // log('⚙️  Cron jobs scheduled')
+
+        server.listen(PORT, () => {
+            log(`🚀 Server running at http://localhost:${PORT}`);
+        });
+
+    } catch (err) {
+        error('❌ Server startup failed:', err);
+        process.exit(1);
+    }
 })();

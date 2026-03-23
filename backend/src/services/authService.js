@@ -127,7 +127,7 @@ exports.googleSignup = async (body) => {
             code: code,
             client_id: process.env.GOOGLE_CLIENT_ID,
             client_secret: process.env.GOOGLE_CLIENT_SECRET,
-            redirect_uri: `${process.env.FRONTEND_URL}/google-callback`, 
+            redirect_uri: `${process.env.FRONTEND_URL}/google-callback`,
             grant_type: 'authorization_code',
         });
 
@@ -347,7 +347,21 @@ exports.saveJiraCredentials = async (userId, jiraDomain, jiraEmail, jiraApiToken
         userId,
         { jiraDomain, jiraEmail, jiraApiToken },
         { new: true }
-    ).select("-password");
+    ).select('-password');
+
+    if (!user) {
+        throw { statusCode: 404, message: 'User not found' };
+    }
+
+    // Auto-initialize workspace after credentials saved
+    try {
+        const jiraService = require('./jiraService');
+        await jiraService.initializeWorkspace(userId);
+    } catch (err) {
+        // Don't fail the whole request if workspace init fails
+        // User can manually trigger init later
+        console.warn('⚠️ Workspace auto-init failed:', err.message);
+    }
 
     return user;
-};
+};;

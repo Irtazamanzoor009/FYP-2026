@@ -7,6 +7,7 @@ const loggerMiddleware = require("./middleware/loggerMiddleware");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require('./routes/userRoutes');
+const jiraRoutes = require('./routes/jiraRoutes');
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.get("/api/health", (req, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
+app.use('/api/jira', jiraRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
