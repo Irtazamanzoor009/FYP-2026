@@ -9,6 +9,7 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require('./routes/userRoutes');
 const jiraRoutes = require('./routes/jiraRoutes');
 const overviewRoutes = require('./routes/overviewRoutes');
+const suggestionsRoutes = require('./routes/suggestionsRoutes');
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use('/api/jira', jiraRoutes);
 app.use('/api/overview', overviewRoutes);
+app.use('/api/suggestions', suggestionsRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
