@@ -11,6 +11,7 @@ const jiraRoutes = require('./routes/jiraRoutes');
 const overviewRoutes = require('./routes/overviewRoutes');
 const suggestionsRoutes = require('./routes/suggestionsRoutes');
 const riskRoutes = require('./routes/riskRoutes');
+const decisionRoutes = require('./routes/decisionRoutes');
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/jira', jiraRoutes);
 app.use('/api/overview', overviewRoutes);
 app.use('/api/suggestions', suggestionsRoutes);
 app.use('/api/risk', riskRoutes);
+app.use('/api/decisions', decisionRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
