@@ -742,7 +742,9 @@ const getRiskData = async (userId) => {
     const isFresh = riskCache &&
         riskCache.expiresAt > new Date();
 
-    if (!isFresh) {
+    const sprintChanged = riskCache && sprintCache.activeSprint.id !== riskCache.sprintId;
+
+    if (!isFresh || sprintChanged) {
         log('🔄 Risk cache expired. Recalculating...');
         riskCache = await syncRiskCache(userId);
     } else {

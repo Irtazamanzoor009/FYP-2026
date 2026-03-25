@@ -5,6 +5,7 @@ const WorkspaceConfig = require('../models/WorkspaceConfig');
 const jiraService = require('./jiraService');
 const { GoogleGenAI } = require('@google/genai');
 const { log, error } = require('../utils/logger');
+const { detectTaskType, canMemberDoTask } = require('../utils/roleSkills');
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -77,64 +78,90 @@ const getUserCache = async (userId) => {
 // ─────────────────────────────────────────
 // STEP 1: Detect suggestion triggers
 // ─────────────────────────────────────────
-const detectTriggers = (cache) => {
+const detectTriggers = async (cache, userId) => {
     const triggers = [];
     const { activeSprint, teamWorkload } = cache;
     const issues = activeSprint.issues;
 
-    // Trigger 1: Overloaded team members
+    // Get team roles from WorkspaceConfig for role-based assignment
+    const config = await WorkspaceConfig.findOne({ userId });
+    const teamRoles = config?.teamMembers || [];
+
+    // ── Trigger 1: Overloaded team members ──
     const overloadedMembers = teamWorkload.filter(
         m => m.status === 'Overloaded'
     );
 
     overloadedMembers.forEach(member => {
-        // Find underloaded members to reassign to
-        const underloaded = teamWorkload.filter(
-            m => m.workloadPercentage < 90 &&
-                 m.accountId !== member.accountId
-        );
+        // Find the highest priority incomplete task to reassign
+        const taskToReassign = member.tasks
+            .sort((a, b) => {
+                const order = {
+                    'Highest': 5, 'High': 4,
+                    'Medium': 3, 'Low': 2, 'Lowest': 1
+                };
+                return (order[b.priority] || 0) -
+                    (order[a.priority] || 0);
+            })[0];
+
+        if (!taskToReassign) return;
+
+        // Detect task type from summary keywords
+        const taskType = detectTaskType(taskToReassign);
+
+        // Find underloaded member who is role-compatible
+        const underloaded = teamWorkload.filter(m => {
+            // Must be below 70% workload
+            if (m.workloadPercentage >= 70) return false;
+            // Cannot reassign to same person
+            if (m.accountId === member.accountId) return false;
+
+            // Check role compatibility
+            const memberRoleConfig = teamRoles.find(
+                r => r.accountId === m.accountId
+            );
+            const memberSkills = memberRoleConfig?.skills || [];
+
+            // If no roles configured → assume anyone can do anything
+            // If roles configured → check compatibility
+            return canMemberDoTask(memberSkills, taskType);
+        });
 
         if (underloaded.length > 0) {
-            // Find the highest priority task to reassign
-            const taskToReassign = member.tasks
-                .sort((a, b) => {
-                    const order = {
-                        'Highest': 5, 'High': 4,
-                        'Medium': 3, 'Low': 2, 'Lowest': 1
-                    };
-                    return (order[b.priority] || 0) -
-                           (order[a.priority] || 0);
-                })[0];
+            // Pick the most underloaded compatible member
+            const bestMatch = underloaded.sort(
+                (a, b) => a.workloadPercentage - b.workloadPercentage
+            )[0];
 
-            if (taskToReassign) {
-                triggers.push({
-                    type: 'TASK_REASSIGN',
-                    priority: member.rawPercentage > 120
-                        ? 'URGENT'
-                        : 'SOON',
-                    data: {
-                        fromMember: {
-                            accountId: member.accountId,
-                            name: member.name,
-                            workload: member.rawPercentage,
-                            totalPoints: member.totalPoints
-                        },
-                        toMember: {
-                            accountId: underloaded[0].accountId,
-                            name: underloaded[0].name,
-                            workload: underloaded[0].workloadPercentage
-                        },
-                        task: taskToReassign,
-                        blockedTasksCount: issues.filter(
-                            i => i.isBlocked
-                        ).length
-                    }
-                });
-            }
+            triggers.push({
+                type: 'TASK_REASSIGN',
+                priority: member.rawPercentage > 120
+                    ? 'URGENT'
+                    : 'SOON',
+                data: {
+                    fromMember: {
+                        accountId: member.accountId,
+                        name: member.name,
+                        workload: member.rawPercentage,
+                        totalPoints: member.totalPoints
+                    },
+                    toMember: {
+                        accountId: bestMatch.accountId,
+                        name: bestMatch.name,
+                        workload: bestMatch.workloadPercentage
+                    },
+                    task: taskToReassign,
+                    taskType,
+                    blockedTasksCount: issues.filter(
+                        i => i.isBlocked
+                    ).length,
+                    roleCompatible: true
+                }
+            });
         }
     });
 
-    // Trigger 2: Velocity drop — suggest deadline buffer
+    // ── Trigger 2: Velocity drop — suggest deadline buffer ──
     const today = new Date();
     const sprintEnd = new Date(activeSprint.endDate);
     const sprintStart = new Date(activeSprint.startDate);
@@ -152,7 +179,7 @@ const detectTriggers = (cache) => {
             : 0;
         const requiredVelocity = daysLeft > 0
             ? (activeSprint.totalStoryPoints -
-               activeSprint.completedStoryPoints) / daysLeft
+                activeSprint.completedStoryPoints) / daysLeft
             : 999;
 
         const velocityGap = requiredVelocity > 0
@@ -165,34 +192,40 @@ const detectTriggers = (cache) => {
                 priority: velocityGap > 0.6 ? 'URGENT' : 'SOON',
                 data: {
                     sprintName: activeSprint.name,
-                    currentVelocity: Math.round(currentVelocity * 10) / 10,
-                    requiredVelocity: Math.round(requiredVelocity * 10) / 10,
-                    velocityGapPercent: Math.round(velocityGap * 100),
+                    currentVelocity: Math.round(
+                        currentVelocity * 10
+                    ) / 10,
+                    requiredVelocity: Math.round(
+                        requiredVelocity * 10
+                    ) / 10,
+                    velocityGapPercent: Math.round(
+                        velocityGap * 100
+                    ),
                     daysLeft,
                     remainingPoints: activeSprint.totalStoryPoints -
-                                    activeSprint.completedStoryPoints,
+                        activeSprint.completedStoryPoints,
                     averageVelocity: cache.averageVelocity
                 }
             });
         }
     }
 
-    // Trigger 3: Blocked tasks — dependency alert
+    // ── Trigger 3: Blocked tasks — dependency alert ──
     const blockedTasks = issues.filter(i => i.isBlocked);
     if (blockedTasks.length > 0) {
-        // Find the most critical blocked task
         const criticalBlocked = blockedTasks.sort((a, b) => {
             const order = {
                 'Highest': 5, 'High': 4,
                 'Medium': 3, 'Low': 2, 'Lowest': 1
             };
-            return (order[b.priority] || 0) - (order[a.priority] || 0);
+            return (order[b.priority] || 0) -
+                (order[a.priority] || 0);
         })[0];
 
         triggers.push({
             type: 'DEPENDENCY_ALERT',
             priority: criticalBlocked.priority === 'Highest' ||
-                      criticalBlocked.priority === 'High'
+                criticalBlocked.priority === 'High'
                 ? 'URGENT'
                 : 'SOON',
             data: {
@@ -213,11 +246,11 @@ const detectTriggers = (cache) => {
         });
     }
 
-    // Trigger 4: Overdue high priority tasks
+    // ── Trigger 4: Overdue high priority tasks ──
     const overdueHighPriority = issues.filter(
         i => i.isOverdue &&
-        (i.priority === 'Highest' || i.priority === 'High') &&
-        i.status !== 'Done'
+            (i.priority === 'Highest' || i.priority === 'High') &&
+            i.status !== 'Done'
     );
 
     if (overdueHighPriority.length > 0) {
@@ -226,7 +259,7 @@ const detectTriggers = (cache) => {
             ? Math.ceil(
                 (today - new Date(mostOverdue.dueDate)) /
                 (1000 * 60 * 60 * 24)
-              )
+            )
             : 0;
 
         triggers.push({
@@ -286,14 +319,14 @@ Example for TASK_REASSIGN:
         title: trigger.type === 'TASK_REASSIGN'
             ? `Reassign task from ${trigger.data.fromMember?.name}`
             : trigger.type === 'DEADLINE_BUFFER'
-            ? `Add buffer to ${trigger.data.sprintName}`
-            : trigger.type === 'DEPENDENCY_ALERT'
-            ? `Resolve blocked task ${trigger.data.blockedTask?.key}`
-            : `Escalate priority task ${trigger.data.task?.key}`,
+                ? `Add buffer to ${trigger.data.sprintName}`
+                : trigger.type === 'DEPENDENCY_ALERT'
+                    ? `Resolve blocked task ${trigger.data.blockedTask?.key}`
+                    : `Escalate priority task ${trigger.data.task?.key}`,
         aiReasoning: `A ${trigger.type.toLowerCase().replace('_', ' ')} issue was detected in the current sprint requiring immediate attention.`,
         impactPreview: 'Resolving this issue will improve sprint success probability.',
         jiraIssueKey: trigger.data.task?.key ||
-                      trigger.data.blockedTask?.key || null
+            trigger.data.blockedTask?.key || null
     };
 
     const geminiText = await callGemini(prompt, null);
@@ -332,7 +365,7 @@ const generateSuggestions = async (userId) => {
     }
 
     // Detect triggers from cache data
-    const triggers = detectTriggers(cache);
+    const triggers = await detectTriggers(cache, userId);
 
     if (triggers.length === 0) {
         log('✅ No suggestion triggers detected. Sprint looks healthy.');
@@ -465,7 +498,7 @@ const approveSuggestion = async (userId, suggestionId) => {
             log(`✅ Jira updated: ${jiraSyncMessage}`);
 
         } else if (suggestion.type === 'DEADLINE_BUFFER' &&
-                   suggestion.jiraIssueKey) {
+            suggestion.jiraIssueKey) {
 
             // Add 2 days to current due date
             const currentDue = suggestion.currentDueDate
@@ -513,10 +546,10 @@ const approveSuggestion = async (userId, suggestionId) => {
         actionType: suggestion.type === 'TASK_REASSIGN'
             ? 'TASK_REASSIGNMENT'
             : suggestion.type === 'DEADLINE_BUFFER'
-            ? 'DEADLINE_EXTENSION'
-            : suggestion.type === 'PRIORITY_ESCALATION'
-            ? 'PRIORITY_ESCALATION'
-            : 'DEPENDENCY_RESOLVED',
+                ? 'DEADLINE_EXTENSION'
+                : suggestion.type === 'PRIORITY_ESCALATION'
+                    ? 'PRIORITY_ESCALATION'
+                    : 'DEPENDENCY_RESOLVED',
         actionDetail: `${suggestion.title} — ${suggestion.jiraIssueKey || 'N/A'}`,
         status: 'APPROVED',
         executedBy: user.name,

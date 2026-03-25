@@ -89,8 +89,10 @@ const calculateTeamWorkload = (issues) => {
         const hoursRequired = member.totalPoints * HOURS_PER_POINT;
         const rawPercentage = (hoursRequired / CAPACITY_HOURS) * 100;
 
-        // Cap at 100% for display but keep raw for calculations
-        const workloadPercentage = Math.min(Math.round(rawPercentage), 100);
+        // displayPercentage: capped at 100 for progress bar width
+        // rawPercentage: actual value for number label (e.g. 260%)
+        const displayPercentage = Math.min(Math.round(rawPercentage), 100);
+        const actualPercentage = Math.round(rawPercentage);
 
         let status = 'Optimal';
         if (rawPercentage > 100) status = 'Overloaded';
@@ -99,8 +101,9 @@ const calculateTeamWorkload = (issues) => {
 
         return {
             ...member,
-            workloadPercentage,
-            rawPercentage: Math.round(rawPercentage),
+            workloadPercentage: displayPercentage,  // bar width (max 100)
+            actualPercentage,                        // label number (can be 260%)
+            rawPercentage: actualPercentage,         // kept for calculations
             status
         };
     });
@@ -129,18 +132,34 @@ const calculateHealthScore = (sprintData, teamWorkload, averageVelocity) => {
         Math.ceil((today - start) / (1000 * 60 * 60 * 24)), 1
     );
 
-    // Factor 1: Progress score (0-40 points)
     const expectedProgress = Math.min(daysElapsed / totalDays, 1);
     const actualProgress = totalStoryPoints > 0
         ? completedStoryPoints / totalStoryPoints
         : 0;
 
-    const progressRatio = expectedProgress > 0
-        ? actualProgress / expectedProgress
-        : 1;
-    const progressScore = Math.min(progressRatio * 40, 40);
+    // ── Factor 1: Progress Score (0-40 points) ──
+    // Grace period = first 20% of sprint days
+    // Example: 15 day sprint → grace period = day 1 to day 3
+    // During grace period team gets full progress score
+    // because zero completion on early days is completely normal
+    const graceThreshold = 0.20;
+    let progressScore;
 
-    // Factor 2: Team health score (0-30 points)
+    if (expectedProgress <= graceThreshold) {
+        // Still in grace period — full marks
+        progressScore = 40;
+    } else if (actualProgress >= expectedProgress) {
+        // On track or ahead of schedule
+        progressScore = 40;
+    } else {
+        // Behind schedule — penalize proportionally
+        const progressRatio = expectedProgress > 0
+            ? actualProgress / expectedProgress
+            : 1;
+        progressScore = Math.min(progressRatio * 40, 40);
+    }
+
+    // ── Factor 2: Team Health Score (0-30 points) ──
     const overloadedCount = teamWorkload.filter(
         m => m.status === 'Overloaded'
     ).length;
@@ -151,19 +170,22 @@ const calculateHealthScore = (sprintData, teamWorkload, averageVelocity) => {
         30 - (overloadedCount * 12) - (warningCount * 5), 0
     );
 
-    // Factor 3: Risk score (0-30 points)
+    // ── Factor 3: Risk Score (0-30 points) ──
     const blockedTasks = issues.filter(i => i.isBlocked).length;
     const overdueTasks = issues.filter(i => i.isOverdue).length;
     const riskScore = Math.max(
         30 - (blockedTasks * 8) - (overdueTasks * 6), 0
     );
 
-    const totalScore = Math.round(progressScore + teamScore + riskScore);
+    const totalScore = Math.round(
+        progressScore + teamScore + riskScore
+    );
     const finalScore = Math.min(Math.max(totalScore, 0), 100);
 
+    // Adjusted thresholds — more realistic for sprint lifecycle
     let status = 'Healthy';
-    if (finalScore < 50) status = 'Critical';
-    else if (finalScore < 75) status = 'At Risk';
+    if (finalScore < 40) status = 'Critical';
+    else if (finalScore < 65) status = 'At Risk';
 
     return {
         score: finalScore,
@@ -178,7 +200,8 @@ const calculateHealthScore = (sprintData, teamWorkload, averageVelocity) => {
             totalDays,
             daysRemaining: Math.max(totalDays - daysElapsed, 0),
             expectedProgress: Math.round(expectedProgress * 100),
-            actualProgress: Math.round(actualProgress * 100)
+            actualProgress: Math.round(actualProgress * 100),
+            inGracePeriod: expectedProgress <= graceThreshold
         }
     };
 };
@@ -396,22 +419,51 @@ Example format:
 // ─────────────────────────────────────────
 const syncSprintCache = async (userId) => {
     const config = await WorkspaceConfig.findOne({ userId });
-
     if (!config || !config.isConnected) {
         throw { statusCode: 400, message: 'Jira workspace not connected.' };
     }
 
     log(`🔄 Syncing sprint cache for user: ${userId}`);
 
-    // Fetch fresh data from Jira in parallel
-    const [activeSprintData, closedSprints] = await Promise.all([
-        jiraService.fetchActiveSprintIssues(userId),
-        jiraService.fetchClosedSprints(userId)
-    ]);
-
+    // Always fetch active sprint fresh
+    const activeSprintData = await jiraService.fetchActiveSprintIssues(userId);
     const { sprint, issues } = activeSprintData;
 
-    // Calculate story point totals
+    // Check existing cache
+    const existingCache = await SprintCache.findOne({
+        userId,
+        projectKey: config.selectedProjectKey
+    });
+
+    // Detect sprint change
+    const sprintChanged = existingCache && existingCache.activeSprint?.id !== sprint.id;
+
+    // Fetch closed sprints only when needed
+    let closedSprints;
+    if (!existingCache ||
+        sprintChanged ||
+        !existingCache.closedSprints ||
+        existingCache.closedSprints.length === 0) {
+
+        log('🔄 Fetching closed sprints from Jira...');
+        closedSprints = await jiraService.fetchClosedSprints(userId);
+
+        // If sprint changed handle old sprint data
+        if (sprintChanged) {
+            log(`🔄 Sprint changed from ${existingCache.activeSprint?.id} to ${sprint.id}`);
+            await handleSprintTransition(
+                userId,
+                config.selectedProjectKey,
+                existingCache.activeSprint?.id,
+                sprint.id
+            );
+        }
+    } else {
+        // Reuse existing closed sprints from cache
+        closedSprints = existingCache.closedSprints;
+        log('⚡ Using cached closed sprints data');
+    }
+
     let totalStoryPoints = 0;
     let completedStoryPoints = 0;
     let inProgressStoryPoints = 0;
@@ -425,33 +477,19 @@ const syncSprintCache = async (userId) => {
         else todoStoryPoints += pts;
     });
 
-    // Calculate average velocity from closed sprints
     const velocities = closedSprints
         .map(s => s.velocity)
         .filter(v => v > 0);
 
     const averageVelocity = velocities.length > 0
-        ? Math.round(
-            velocities.reduce((a, b) => a + b, 0) / velocities.length
-        )
+        ? Math.round(velocities.reduce((a, b) => a + b, 0) / velocities.length)
         : 0;
 
-    // Calculate team workload
     const teamWorkload = calculateTeamWorkload(issues);
-
-    // Build cache document
-    // Detect problems and generate topActions during sync
     const problems = detectTopProblems(
-        {
-            totalStoryPoints,
-            completedStoryPoints,
-            startDate: sprint.startDate,
-            endDate: sprint.endDate,
-            issues
-        },
+        { totalStoryPoints, completedStoryPoints, startDate: sprint.startDate, endDate: sprint.endDate, issues },
         teamWorkload
     );
-
     const topActions = await generateActionTexts(problems, sprint.name);
 
     const cacheData = {
@@ -468,27 +506,23 @@ const syncSprintCache = async (userId) => {
         closedSprints,
         averageVelocity,
         teamWorkload,
-        topActions,           // ← stored in cache now
+        topActions,
         cachedAt: new Date(),
         expiresAt: new Date(Date.now() + 5 * 60 * 1000)
     };
 
-    // Upsert — update if exists, create if not
     const cache = await SprintCache.findOneAndUpdate(
         { userId, projectKey: config.selectedProjectKey },
         cacheData,
-        { new: true, upsert: true }
+        { returnDocument: 'after', upsert: true }
     );
 
-    // Update lastSyncedAt in WorkspaceConfig
     await WorkspaceConfig.findOneAndUpdate(
         { userId },
         { lastSyncedAt: new Date() }
     );
 
-    log(`✅ Sprint cache synced. Total points: ${totalStoryPoints}`);
-    log(`✅ Team workload calculated for ${teamWorkload.length} members`);
-
+    log(`✅ Sprint cache synced. Sprint: ${sprint.name}`);
     return cache;
 };
 
@@ -614,6 +648,65 @@ const refreshOverviewData = async (userId) => {
         projectKey: config.selectedProjectKey,
         refreshed: true
     };
+};
+
+// ─────────────────────────────────────────
+// Handle sprint transition — archive old data
+// ─────────────────────────────────────────
+const handleSprintTransition = async (
+    userId,
+    projectKey,
+    oldSprintId,
+    newSprintId
+) => {
+    log(`🔄 Handling sprint transition: ${oldSprintId} → ${newSprintId}`);
+
+    const Suggestion = require('../models/Suggestion');
+    const Alert = require('../models/Alert');
+    const AgentLog = require('../models/AgentLog');
+
+    // Archive old sprint suggestions
+    // Mark all PENDING suggestions as IGNORED
+    // They belong to old sprint — no longer relevant
+    await Suggestion.updateMany(
+        {
+            userId,
+            projectKey,
+            sprintId: oldSprintId,
+            status: 'PENDING'
+        },
+        {
+            status: 'IGNORED',
+            ignoredBy: 'System',
+            ignoredAt: new Date(),
+            ignoreReason: 'Sprint completed — auto-archived'
+        }
+    );
+
+    // Resolve all active alerts from old sprint
+    await Alert.updateMany(
+        {
+            userId,
+            projectKey,
+            status: 'ACTIVE',
+            alertKey: { $regex: `_${oldSprintId}$` }
+        },
+        {
+            status: 'RESOLVED',
+            resolvedBy: 'System',
+            resolvedAt: new Date()
+        }
+    );
+
+    // Log the transition
+    const { logAgentActivity } = require('./monitoringService');
+    await logAgentActivity(
+        userId,
+        `Sprint transition detected. Sprint ${oldSprintId} archived. Starting fresh analysis for new sprint.`,
+        'SYNC'
+    );
+
+    log(`✅ Sprint transition complete. Old data archived.`);
 };
 
 module.exports = {

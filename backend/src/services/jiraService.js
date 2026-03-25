@@ -114,10 +114,11 @@ const initializeWorkspace = async (userId) => {
     log(`🔄 Initializing Jira workspace for user: ${userId}`);
 
     // Run all detections in parallel for speed
-    const [boards, projects, storyPointsField] = await Promise.all([
+    const [boards, projects, storyPointsField, teamMembers] = await Promise.all([
         fetchBoards(client),
         fetchProjects(client),
-        detectStoryPointsField(client)
+        detectStoryPointsField(client),
+        fetchTeamMembersFromClient(client)
     ]);
 
     // Match projects to their boards
@@ -140,7 +141,18 @@ const initializeWorkspace = async (userId) => {
             selectedProjectName: matchedProjects[0]?.name || null,
             selectedBoardId: matchedProjects[0]?.boardId || primaryBoardId,
             isConnected: true,
-            connectedAt: new Date()
+            connectedAt: new Date(),
+
+            // NEW: Save team members during init
+            // PM only needs to assign roles later
+            teamMembers: teamMembers.map(member => ({
+                accountId: member.accountId,
+                name: member.name,
+                email: member.email || '',
+                role: null,    // PM assigns role later
+                skills: []     // auto-populated when role assigned
+            })),
+            rolesConfigured: false
         },
         { new: true, upsert: true }
     );
@@ -354,6 +366,22 @@ const fetchClosedSprints = async (userId) => {
     }
 
     return results;
+};
+
+const fetchTeamMembersFromClient = async (client) => {
+    const response = await client.get(
+        '/rest/api/3/users/search?maxResults=50'
+    );
+    const allUsers = response.data;
+    const realUsers = allUsers.filter(
+        u => u.accountType === 'atlassian'
+    );
+    return realUsers.map(u => ({
+        accountId: u.accountId,
+        name: u.displayName,
+        email: u.emailAddress || '',
+        avatar: u.avatarUrls?.['48x48']
+    }));
 };
 
 // ─────────────────────────────────────────

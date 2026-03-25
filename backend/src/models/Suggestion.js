@@ -98,6 +98,10 @@ const suggestionSchema = new mongoose.Schema({
     ignoredAt: {
         type: Date,
         default: null
+    },
+    ignoreReason: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 

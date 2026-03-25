@@ -38,4 +38,12 @@ router.get('/team', jiraController.getTeamMembers);
 // Get workspace config
 router.get('/workspace-config', jiraController.getWorkspaceConfig);
 
+// POST /api/jira/team-roles
+// Save team member roles configured by PM
+router.post('/team-roles', jiraController.saveTeamRoles);
+
+// GET /api/jira/team-roles
+// Get current team roles configuration
+router.get('/team-roles', jiraController.getTeamRoles);
+
 module.exports = router;

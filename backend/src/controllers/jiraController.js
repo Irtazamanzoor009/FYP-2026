@@ -144,3 +144,71 @@ exports.getWorkspaceConfig = async (req, res, next) => {
         next(err);
     }
 };
+
+// POST /api/jira/team-roles
+exports.saveTeamRoles = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        const { teamMembers } = req.body;
+        const { getSkillsForRole } = require('../utils/roleSkills');
+        const WorkspaceConfig = require('../models/WorkspaceConfig');
+
+        if (!teamMembers || !Array.isArray(teamMembers)) {
+            throw { statusCode: 400, message: 'teamMembers array required' };
+        }
+
+        // Auto-populate skills from role
+        const enrichedMembers = teamMembers.map(member => ({
+            ...member,
+            skills: member.role
+                ? getSkillsForRole(member.role)
+                : []
+        }));
+
+        const config = await WorkspaceConfig.findOneAndUpdate(
+            { userId },
+            {
+                teamMembers: enrichedMembers,
+                rolesConfigured: true
+            },
+            { returnDocument: 'after' }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Team roles saved successfully',
+            data: {
+                teamMembers: config.teamMembers,
+                rolesConfigured: config.rolesConfigured
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// GET /api/jira/team-roles
+exports.getTeamRoles = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        const WorkspaceConfig = require('../models/WorkspaceConfig');
+
+        const config = await WorkspaceConfig.findOne({ userId });
+        if (!config) {
+            throw { statusCode: 404, message: 'Workspace not found' };
+        }
+
+        // Members already in WorkspaceConfig from initializeWorkspace()
+        // No need to call Jira API again
+        res.status(200).json({
+            success: true,
+            data: {
+                teamMembers: config.teamMembers || [],
+                rolesConfigured: config.rolesConfigured || false
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+

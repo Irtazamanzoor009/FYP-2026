@@ -12,6 +12,29 @@ const projectSchema = new mongoose.Schema({
     }
 }, { _id: false });
 
+const teamMemberSchema = new mongoose.Schema({
+    accountId: String,
+    name: String,
+    email: String,
+    role: {
+        type: String,
+        enum: [
+            'Lead Developer',
+            'Backend Engineer',
+            'Frontend Developer',
+            'Full Stack Developer',
+            'QA Engineer',
+            'DevOps Engineer',
+            'Project Manager'
+        ],
+        default: null
+    },
+    skills: {
+        type: [String],
+        default: []
+    }
+}, { _id: false });
+
 const workspaceConfigSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -62,6 +85,14 @@ const workspaceConfigSchema = new mongoose.Schema({
     connectedAt: {
         type: Date,
         default: Date.now
+    },
+    teamMembers: {
+        type: [teamMemberSchema],
+        default: []
+    },
+    rolesConfigured: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 
