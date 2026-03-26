@@ -13,6 +13,7 @@ const suggestionsRoutes = require('./routes/suggestionsRoutes');
 const riskRoutes = require('./routes/riskRoutes');
 const decisionRoutes = require('./routes/decisionRoutes');
 const monitoringRoutes = require('./routes/monitoringRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api/suggestions', suggestionsRoutes);
 app.use('/api/risk', riskRoutes);
 app.use('/api/decisions', decisionRoutes);
 app.use('/api/monitoring', monitoringRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
