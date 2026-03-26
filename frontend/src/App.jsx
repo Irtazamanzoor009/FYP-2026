@@ -24,6 +24,7 @@ import RiskAnalytics from './pages/Dashboard/RiskAnalytics';
 import DecisionHistory from './pages/Dashboard/DecisionHistory';
 import Monitoring from './pages/Dashboard/Monitoring';
 import Settings from './pages/Dashboard/Settings';
+import SprintAnalytics from './pages/Dashboard/SprintAnalytics';
 
 function App() {
   const { checkAuth, isCheckingAuth } = useAuthStore();
@@ -53,6 +54,7 @@ function App() {
         <Route element={<ProtectedRoutes />}>
           <Route path="/jira-connect" element={<JiraConnect />} />
           {/* <Route path="/dashboard" element={<Dashboard />} /> */}
+
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Overview />} />
             <Route path="suggestions" element={<SuggestionsBoard />} />
@@ -60,6 +62,7 @@ function App() {
             <Route path="history" element={<DecisionHistory />} />
             <Route path="monitoring" element={<Monitoring />} />
             <Route path="settings" element={<Settings />} />
+             <Route path="sprint-analytics" element={<SprintAnalytics />} />
           </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>

@@ -200,39 +200,71 @@ const useAuthStore = create((set) => ({
     fetchJiraProjects: async () => {
         set({ isLoading: true });
         try {
-            // This will call your future backend API that talks to Jira
-            // const res = await API.get('/jira/projects');
-            // For now, dummy data:
-            const dummyProjects = [
-                { id: '101', name: 'Website Redesign', key: 'WEB' },
-                { id: '102', name: 'Mobile App Dev', key: 'MOB' },
-                { id: '103', name: 'Marketing Portal', key: 'MKT' },
-            ];
-            set({ projects: dummyProjects, selectedProject: dummyProjects[0], isLoading: false });
+            const res = await API.get('/jira/projects');
+            const { projects, selectedProject } = res.data.data;
+
+            set({
+                projects: projects || [],
+                selectedProject: selectedProject
+                    ? {
+                        id: selectedProject.key,
+                        key: selectedProject.key,
+                        name: selectedProject.name,
+                        boardId: selectedProject.boardId
+                    }
+                    : projects.length > 0
+                        ? {
+                            id: projects[0].key,
+                            key: projects[0].key,
+                            name: projects[0].name,
+                            boardId: projects[0].boardId
+                        }
+                        : null,
+                isLoading: false
+            });
+            return { success: true };
         } catch (error) {
             set({ isLoading: false });
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Failed to fetch projects'
+            };
         }
     },
 
-    setSelectedProject: (project) => {
+    setSelectedProject: async (project) => {
+        // Optimistically update UI immediately
         set({ selectedProject: project });
+
+        // Then tell backend which project is now selected
+        try {
+            await API.post('/jira/switch-project', {
+                projectKey: project.key
+            });
+            return { success: true };
+        } catch (error) {
+            return { success: false };
+        }
     },
 
     syncJiraData: async () => {
         set({ isSyncing: true });
         try {
-            const currentProject = get().selectedProject;
-            // API call to trigger backend agentic analysis for the selected project
-            // await API.post(`/jira/sync/${currentProject.id}`);
-
-            // Artificial delay to show the animation
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Refresh all data sources in parallel
+            await Promise.all([
+                API.post('/overview/refresh'),
+                API.post('/risk/refresh'),
+                API.post('/monitoring/check')
+            ]);
 
             set({ isSyncing: false });
             return { success: true };
         } catch (error) {
             set({ isSyncing: false });
-            return { success: false };
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Sync failed'
+            };
         }
     },
 }));

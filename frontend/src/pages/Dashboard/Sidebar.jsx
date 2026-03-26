@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Lightbulb, ShieldAlert, History, BarChart3,
-    LogOut, Settings2, Bot, X, Sparkles
+    LogOut, Settings2, Bot, X, Sparkles, TrendingUp
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import LogoutModal from '../../components/LogoutModal';
@@ -13,6 +13,7 @@ const menuItems = [
     { name: 'Risk Analytics', icon: ShieldAlert, path: '/dashboard/risks' },
     { name: 'Decision History', icon: History, path: '/dashboard/history' },
     { name: 'Monitoring', icon: BarChart3, path: '/dashboard/monitoring' },
+    { name: 'Sprint Analytics', icon: TrendingUp, path: '/dashboard/sprint-analytics' }
 ];
 
 const Sidebar = ({ isOpen, toggleSidebar, toggleChat }) => {

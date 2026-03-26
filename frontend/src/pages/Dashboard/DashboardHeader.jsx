@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw, LayoutGrid, ChevronDown, Check, ChevronUp } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import useOverviewStore from '../../store/overviewStore';
 import toast from 'react-hot-toast';
 
 const DashboardHeader = () => {
@@ -14,13 +15,15 @@ const DashboardHeader = () => {
         user
     } = useAuthStore();
 
+    const { clearOverview } = useOverviewStore();
+
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isMobileExpanded, setIsMobileExpanded] = useState(false);
     const dropdownRef = useRef(null);
 
     useEffect(() => {
         if (user?.jiraDomain) fetchJiraProjects();
-    }, [user, fetchJiraProjects]);
+    }, [user?.jiraDomain]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -33,19 +36,38 @@ const DashboardHeader = () => {
     }, []);
 
     const handleSync = async () => {
-        const tid = toast.loading(`Syncing...`);
+        const tid = toast.loading('Syncing with Jira...');
         const res = await syncJiraData();
-        if (res.success) toast.success("Data updated!", { id: tid });
-        else toast.error("Sync failed", { id: tid });
+        if (res.success) {
+            // Clear cached overview so next visit fetches fresh
+            clearOverview();
+            toast.success('Data updated!', { id: tid });
+        } else {
+            toast.error('Sync failed', { id: tid });
+        }
+    };
+
+    const handleProjectSwitch = async (project) => {
+        setIsDropdownOpen(false);
+        const tid = toast.loading(`Switching to ${project.name}...`);
+
+        // Clear all cached data when switching projects
+        clearOverview();
+
+        const res = await setSelectedProject(project);
+        if (res?.success !== false) {
+            toast.success(`Switched to ${project.name}`, { id: tid });
+        } else {
+            toast.error('Failed to switch project', { id: tid });
+        }
     };
 
     if (!user?.jiraDomain) return null;
 
     return (
-        /* STABLE WRAPPER: Forced high Z-index with brackets */
         <div className="relative z-[100] w-full bg-white border-b border-gray-100 shadow-sm">
 
-            {/* 1. MOBILE TOGGLE HANDLE (Hidden on Desktop) */}
+            {/* 1. MOBILE TOGGLE HANDLE */}
             <button
                 onClick={() => setIsMobileExpanded(!isMobileExpanded)}
                 className="lg:hidden w-full py-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-gray-400 tracking-widest border-b border-gray-50"
@@ -55,7 +77,6 @@ const DashboardHeader = () => {
             </button>
 
             {/* 2. MAIN HEADER CONTENT */}
-
             <div className={`
                 px-4 lg:px-8 transition-all duration-300 ease-in-out
                 ${isMobileExpanded ? 'block py-4' : 'hidden lg:flex lg:py-1 lg:items-center lg:justify-between'}
@@ -75,7 +96,9 @@ const DashboardHeader = () => {
                                 <span className="text-[9px] font-black text-gray-400 uppercase leading-none mb-1">Active Project</span>
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm font-bold text-[#2c3e50] whitespace-nowrap">
-                                        {selectedProject ? `${selectedProject.name} (${selectedProject.key})` : 'Select Project'}
+                                        {selectedProject
+                                            ? `${selectedProject.name} (${selectedProject.key})`
+                                            : 'Select Project'}
                                     </span>
                                     <ChevronDown size={12} className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                                 </div>
@@ -87,19 +110,24 @@ const DashboardHeader = () => {
                             <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-[110] animate-in fade-in zoom-in-95">
                                 <div className="max-h-60 overflow-y-auto">
                                     {projects.length === 0 ? (
-                                        <div className="px-4 py-2 text-xs text-gray-400 italic">No projects found</div>
+                                        <div className="px-4 py-2 text-xs text-gray-400 italic">
+                                            No projects found
+                                        </div>
                                     ) : (
                                         projects.map((p) => (
                                             <button
                                                 key={p.id}
-                                                onClick={() => { setSelectedProject(p); setIsDropdownOpen(false); }}
-                                                className={`w-full flex items-center justify-between px-4 py-2.5 text-xs transition-all text-left ${selectedProject?.id === p.id ? 'bg-[#18bc9c]/5 text-[#18bc9c] font-bold' : 'text-[#2c3e50] hover:bg-gray-50 font-medium'}`}
+                                                onClick={() => handleProjectSwitch(p)}
+                                                className={`w-full flex items-center justify-between px-4 py-2.5 text-xs transition-all text-left ${selectedProject?.key === p.key
+                                                    ? 'bg-[#18bc9c]/5 text-[#18bc9c] font-bold'
+                                                    : 'text-[#2c3e50] hover:bg-gray-50 font-medium'
+                                                    }`}
                                             >
                                                 <div className="flex flex-col items-start">
                                                     <span>{p.name}</span>
                                                     <span className="text-[9px] opacity-50 font-bold uppercase">{p.key}</span>
                                                 </div>
-                                                {selectedProject?.id === p.id && <Check size={14} />}
+                                                {selectedProject?.key === p.key && <Check size={14} />}
                                             </button>
                                         ))
                                     )}
@@ -128,7 +156,7 @@ const DashboardHeader = () => {
                 </div>
             </div>
 
-            {/* 3. MOBILE CLOSE HANDLE (Visible only when expanded on mobile) */}
+            {/* 3. MOBILE CLOSE HANDLE */}
             {isMobileExpanded && (
                 <button
                     onClick={() => setIsMobileExpanded(false)}
