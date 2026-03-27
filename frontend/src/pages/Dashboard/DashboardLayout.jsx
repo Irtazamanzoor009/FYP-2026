@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import ChatDrawer from './ChatDrawer';
@@ -16,14 +16,30 @@ const DashboardLayout = () => {
     const { user } = useAuthStore();
     const navigate = useNavigate();
 
+    const socketRef = useRef(null);
+
     useEffect(() => {
         if (!user?._id) return;
+        // If socket already connected, don't create another
+        if (socketRef.current?.connected) return;
 
-        // Dynamically import socket.io-client
         import('socket.io-client').then(({ io }) => {
-            const socket = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000', {
-                withCredentials: true
-            });
+            // Disconnect any existing socket first
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+            }
+
+            const socket = io(
+                import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+                {
+                    withCredentials: true,
+                    // Prevent multiple connections
+                    multiplex: false,
+                    reconnectionAttempts: 3
+                }
+            );
+
+            socketRef.current = socket;
 
             socket.on('connect', () => {
                 socket.emit('join', user._id);
@@ -35,12 +51,22 @@ const DashboardLayout = () => {
 
             socket.on('new-alert', (alert) => {
                 addAlert(alert);
-                toast.error(`🚨 ${alert.title}`, { duration: 5000 });
+                toast.error(`🚨 ${alert.title}`, {
+                    duration: 5000,
+                    id: `alert-${alert.title}` // ← prevents duplicate toasts
+                });
             });
-
-            return () => socket.disconnect();
         });
+
+        // Cleanup on unmount
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
+            }
+        };
     }, [user?._id]);
+    // Only user._id dependency — not user object
 
     const isJiraConnected = user?.jiraDomain && user?.jiraApiToken;
 

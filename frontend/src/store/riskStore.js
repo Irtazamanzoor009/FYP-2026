@@ -19,7 +19,8 @@ const useRiskStore = create((set, get) => ({
             (Date.now() - state.lastFetchedAt) < tenMinutes;
 
         if (isFresh && !forceRefresh) return;
-
+        
+        if (state.isLoading) return;
         set({ isLoading: true });
         try {
             const res = await API.get('/risk');

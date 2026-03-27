@@ -18,7 +18,7 @@ const useSuggestionsStore = create((set, get) => ({
             (Date.now() - state.lastFetchedAt) < twoMinutes;
 
         if (isFresh && !forceRefresh) return;
-
+        if (state.isLoading) return;
         set({ isLoading: true });
         try {
             const res = await API.get(

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Bot, Sparkles, User, Loader2, MessageCircle } from 'lucide-react';
 import useChatStore from '../../store/chatStore';
 import useAuthStore from '../../store/authStore';
+import ReactMarkdown from 'react-markdown';
 
 const ChatDrawer = ({ isOpen, onClose }) => {
     const {
@@ -134,13 +135,57 @@ const ChatDrawer = ({ isOpen, onClose }) => {
                                     : <Bot size={14} className="text-white" />
                                 }
                             </div>
-                            <div className={`p-4 rounded-2xl text-xs leading-relaxed shadow-sm max-w-[80%] ${msg.role === 'user'
+                            {/* <div className={`p-4 rounded-2xl text-xs leading-relaxed shadow-sm max-w-[80%] ${msg.role === 'user'
                                     ? 'bg-[#2c3e50] text-white'
                                     : msg.isError
                                         ? 'bg-red-50 text-red-600 border border-red-100'
                                         : 'bg-white text-gray-700'
                                 }`}>
                                 {msg.text}
+                            </div> */}
+
+                            <div className={`p-4 rounded-2xl text-xs leading-relaxed shadow-sm max-w-[80%] ${msg.role === 'user'
+                                    ? 'bg-[#2c3e50] text-white'
+                                    : msg.isError
+                                        ? 'bg-red-50 text-red-600 border border-red-100'
+                                        : 'bg-white text-gray-700'
+                                }`}>
+                                {msg.role === 'user' ? (
+                                    msg.text
+                                ) : (
+                                    <ReactMarkdown
+                                        components={{
+                                            p: ({ children }) => (
+                                                <p className="mb-2 last:mb-0">{children}</p>
+                                            ),
+                                            strong: ({ children }) => (
+                                                <strong className="font-bold text-[#2c3e50]">{children}</strong>
+                                            ),
+                                            ul: ({ children }) => (
+                                                <ul className="list-disc pl-4 space-y-1 my-2">{children}</ul>
+                                            ),
+                                            ol: ({ children }) => (
+                                                <ol className="list-decimal pl-4 space-y-1 my-2">{children}</ol>
+                                            ),
+                                            li: ({ children }) => (
+                                                <li className="text-xs leading-relaxed">{children}</li>
+                                            ),
+                                            h1: ({ children }) => (
+                                                <h1 className="font-bold text-sm text-[#2c3e50] mb-1">{children}</h1>
+                                            ),
+                                            h2: ({ children }) => (
+                                                <h2 className="font-bold text-xs text-[#2c3e50] mb-1">{children}</h2>
+                                            ),
+                                            code: ({ children }) => (
+                                                <code className="bg-gray-100 px-1 rounded text-[10px] font-mono">
+                                                    {children}
+                                                </code>
+                                            )
+                                        }}
+                                    >
+                                        {msg.text}
+                                    </ReactMarkdown>
+                                )}
                             </div>
                         </div>
                     ))}

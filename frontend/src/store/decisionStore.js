@@ -19,7 +19,7 @@ const useDecisionStore = create((set, get) => ({
             !forceRefresh;
 
         if (isFresh) return;
-
+        if (state.isLoading) return;
         set({ isLoading: true });
         try {
             const params = new URLSearchParams({

@@ -67,6 +67,7 @@ const scheduleSprintSync = () => {
 // JOB 2: Sync risk cache every 10 minutes
 // ─────────────────────────────────────────
 const scheduleRiskSync = () => {
+    // cron.schedule('* * * * *', async () => {
     cron.schedule('*/10 * * * *', async () => {
         log('⏰ Cron: Risk cache sync starting...');
 

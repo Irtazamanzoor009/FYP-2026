@@ -352,6 +352,10 @@ Example:
 
     const fallbackExplanations = risks.map(r => ({
         type: r.type,
+        level: r.level,
+        score: r.score,
+        affectedIssues: r.affectedIssues || [],
+        affectedMembers: r.affectedMembers || [],
         why: r.type === 'OVERLOAD'
             ? `${r.affectedMembers[0]?.name || 'A team member'} is at ${r.affectedMembers[0]?.workload || 'high'}% workload capacity.`
             : r.type === 'BOTTLENECK'

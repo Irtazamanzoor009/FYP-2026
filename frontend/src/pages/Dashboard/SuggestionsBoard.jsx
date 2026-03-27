@@ -77,7 +77,7 @@ const ExplainModal = ({ explanation, title, onClose }) => (
 // ─────────────────────────────────────────
 // Single Suggestion Card
 // ─────────────────────────────────────────
-const SuggestionCard = ({ item, onApprove, onIgnore, onExplain, isActioning }) => (
+const SuggestionCard = ({ item, onApprove, onIgnore, onExplain, isApproving, isIgnoring, isExplaining }) => (
     <div className={`bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-6 transition-all group ${item.status !== 'PENDING' ? 'opacity-60' : 'hover:shadow-md'
         }`}>
         {/* Left: Icon & Priority */}
@@ -125,28 +125,37 @@ const SuggestionCard = ({ item, onApprove, onIgnore, onExplain, isActioning }) =
                     <div className="flex gap-2">
                         <button
                             onClick={() => onApprove(item._id)}
-                            disabled={isActioning === item._id}
+                            disabled={isApproving === item._id || isIgnoring === item._id}
                             className="flex items-center gap-2 bg-[#18bc9c] text-white px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-[#128f76] transition-all shadow-lg shadow-[#18bc9c]/20 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                            {isActioning === item._id
+                            {isApproving === item._id
                                 ? <Loader2 size={14} className="animate-spin" />
                                 : <CheckCircle2 size={16} />
                             }
-                            Approve & Sync Jira
+                            {isApproving === item._id ? 'Syncing...' : 'Approve & Sync Jira'}
                         </button>
                         <button
                             onClick={() => onIgnore(item._id)}
-                            disabled={isActioning === item._id}
+                            disabled={isApproving === item._id || isIgnoring === item._id}
                             className="flex items-center gap-2 border border-gray-200 text-gray-500 px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-gray-50 transition-all disabled:opacity-60"
                         >
-                            <XCircle size={16} /> Ignore
+                            {isIgnoring === item._id
+                                ? <Loader2 size={14} className="animate-spin" />
+                                : <XCircle size={16} />
+                            }
+                            {isIgnoring === item._id ? 'Ignoring...' : 'Ignore'}
                         </button>
                     </div>
                     <button
                         onClick={() => onExplain(item._id, item.title)}
-                        className="flex items-center gap-2 text-[#2c3e50] hover:text-[#18bc9c] font-bold text-xs transition-colors px-4 py-2 rounded-lg hover:bg-gray-50"
+                        disabled={isExplaining === item._id}
+                        className="flex items-center gap-2 text-[#2c3e50] hover:text-[#18bc9c] font-bold text-xs transition-colors px-4 py-2 rounded-lg hover:bg-gray-50 disabled:opacity-60"
                     >
-                        <MessageCircleQuestion size={16} /> Ask AI Why?
+                        {isExplaining === item._id
+                            ? <Loader2 size={14} className="animate-spin text-[#18bc9c]" />
+                            : <MessageCircleQuestion size={16} />
+                        }
+                        {isExplaining === item._id ? 'Asking AI...' : 'Ask AI Why?'}
                     </button>
                 </div>
             )}
@@ -174,8 +183,12 @@ const SuggestionsBoard = () => {
     } = useSuggestionsStore();
 
     const { selectedProject } = useAuthStore();
-    const [isActioning, setIsActioning] = useState(null);
     const [explainModal, setExplainModal] = useState(null);
+    // const [isActioning, setIsActioning] = useState(null);
+    // const [isExplaining, setIsExplaining] = useState(null);
+
+    const [isApproving, setIsApproving] = useState(null);
+    const [isIgnoring, setIsIgnoring] = useState(null);
     const [isExplaining, setIsExplaining] = useState(null);
 
     useEffect(() => {
@@ -208,9 +221,9 @@ const SuggestionsBoard = () => {
     };
 
     const handleApprove = async (id) => {
-        setIsActioning(id);
+        setIsApproving(id);
         const res = await approveSuggestion(id);
-        setIsActioning(null);
+        setIsApproving(null);
         if (res.success) {
             toast.success(
                 res.data?.jiraSyncSuccess
@@ -224,14 +237,11 @@ const SuggestionsBoard = () => {
     };
 
     const handleIgnore = async (id) => {
-        setIsActioning(id);
+        setIsIgnoring(id);
         const res = await ignoreSuggestion(id);
-        setIsActioning(null);
-        if (res.success) {
-            toast.success('Suggestion ignored', { icon: '🗑️' });
-        } else {
-            toast.error('Failed to ignore');
-        }
+        setIsIgnoring(null);
+        if (res.success) toast.success('Suggestion ignored', { icon: '🗑️' });
+        else toast.error('Failed to ignore');
     };
 
     const handleExplain = async (id, title) => {
@@ -240,6 +250,13 @@ const SuggestionsBoard = () => {
         setIsExplaining(null);
         setExplainModal({ explanation: data.explanation, title });
     };
+
+    // const handleExplain = async (id, title) => {
+    //     setIsActioning(id);
+    //     const data = await explainSuggestion(id);
+    //     setIsActioning(null);
+    //     setExplainModal({ explanation: data.explanation, title });
+    // };
 
     return (
         <div className="space-y-6 lg:space-y-8 animate-in fade-in duration-500 pb-12">
@@ -285,8 +302,8 @@ const SuggestionsBoard = () => {
                         key={s}
                         onClick={() => setStatusFilter(s)}
                         className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase whitespace-nowrap transition-all border ${statusFilter === s
-                                ? 'bg-[#2c3e50] text-white border-[#2c3e50]'
-                                : 'bg-white text-gray-500 border-gray-200 hover:border-[#18bc9c]'
+                            ? 'bg-[#2c3e50] text-white border-[#2c3e50]'
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-[#18bc9c]'
                             }`}
                     >
                         {s}
@@ -334,7 +351,9 @@ const SuggestionsBoard = () => {
                             onApprove={handleApprove}
                             onIgnore={handleIgnore}
                             onExplain={handleExplain}
-                            isActioning={isExplaining === item._id ? item._id : isActioning}
+                            isApproving={isApproving}
+                            isIgnoring={isIgnoring}
+                            isExplaining={isExplaining}
                         />
                     ))}
                 </div>

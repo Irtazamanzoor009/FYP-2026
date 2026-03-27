@@ -159,10 +159,10 @@ const SprintAnalytics = () => {
                         <h3 className="font-bold text-[#2c3e50]">Velocity Comparison</h3>
                     </div>
                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase ${velocityTrend === 'improving'
-                            ? 'bg-[#18bc9c]/10 text-[#18bc9c]'
-                            : velocityTrend === 'declining'
-                                ? 'bg-red-50 text-red-500'
-                                : 'bg-gray-100 text-gray-400'
+                        ? 'bg-[#18bc9c]/10 text-[#18bc9c]'
+                        : velocityTrend === 'declining'
+                            ? 'bg-red-50 text-red-500'
+                            : 'bg-gray-100 text-gray-400'
                         }`}>
                         {velocityTrend === 'improving'
                             ? <TrendingUp size={12} />
@@ -179,10 +179,12 @@ const SprintAnalytics = () => {
 
                 {/* Bar Chart */}
                 <div className="flex items-end gap-3 h-40 mb-4">
+
                     {closedSprints.map((sprint, index) => {
                         const heightPercent = maxVelocity > 0
                             ? (sprint.velocity / maxVelocity) * 100
                             : 0;
+                        const barHeight = Math.max(heightPercent * 1.2, 8);
                         const isBest = sprint.velocity ===
                             Math.max(...closedSprints.map(s => s.velocity));
                         return (
@@ -190,24 +192,31 @@ const SprintAnalytics = () => {
                                 key={index}
                                 className="flex-1 flex flex-col items-center gap-2"
                             >
+                                {/* Fixed height container for BEST label */}
+                                <div className="h-5 flex items-center justify-center">
+                                    {isBest && (
+                                        <span className="text-[8px] font-black text-[#18bc9c] whitespace-nowrap bg-white px-1.5 py-0.5 rounded border border-[#18bc9c]/30 shadow-sm">
+                                            BEST ✓
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Velocity number */}
                                 <span className="text-[10px] font-black text-[#2c3e50]">
                                     {sprint.velocity}
                                 </span>
-                                <div className="w-full relative group cursor-pointer">
+
+                                {/* Bar */}
+                                <div className="w-full">
                                     <div
-                                        className="w-full rounded-t-lg transition-all duration-700 relative"
+                                        className="w-full rounded-t-lg transition-all duration-700"
                                         style={{
-                                            height: `${Math.max(heightPercent * 1.2, 8)}px`,
+                                            height: `${barHeight}px`,
                                             backgroundColor: isBest ? '#18bc9c' : '#2c3e50'
                                         }}
-                                    >
-                                        {isBest && (
-                                            <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] font-black text-[#18bc9c] whitespace-nowrap">
-                                                BEST ✓
-                                            </div>
-                                        )}
-                                    </div>
+                                    />
                                 </div>
+
                                 <span className="text-[9px] font-bold text-gray-400 text-center leading-tight">
                                     S{sprint.sprintNumber}
                                 </span>
