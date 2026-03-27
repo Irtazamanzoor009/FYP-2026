@@ -1,17 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import ChatDrawer from './ChatDrawer';
 import { Bot, Menu, AlertCircle, ChevronRight } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import DashboardHeader from './DashboardHeader';
+import useMonitoringStore from '../../store/monitoringStore';
+import toast from 'react-hot-toast';
 
 const DashboardLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const { addAgentLog, addAlert } = useMonitoringStore();
 
     const { user } = useAuthStore();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!user?._id) return;
+
+        // Dynamically import socket.io-client
+        import('socket.io-client').then(({ io }) => {
+            const socket = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000', {
+                withCredentials: true
+            });
+
+            socket.on('connect', () => {
+                socket.emit('join', user._id);
+            });
+
+            socket.on('agent-activity', (log) => {
+                addAgentLog(log);
+            });
+
+            socket.on('new-alert', (alert) => {
+                addAlert(alert);
+                toast.error(`🚨 ${alert.title}`, { duration: 5000 });
+            });
+
+            return () => socket.disconnect();
+        });
+    }, [user?._id]);
 
     const isJiraConnected = user?.jiraDomain && user?.jiraApiToken;
 

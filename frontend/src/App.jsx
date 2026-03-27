@@ -25,6 +25,7 @@ import DecisionHistory from './pages/Dashboard/DecisionHistory';
 import Monitoring from './pages/Dashboard/Monitoring';
 import Settings from './pages/Dashboard/Settings';
 import SprintAnalytics from './pages/Dashboard/SprintAnalytics';
+import TeamRoles from './pages/Dashboard/TeamRoles';
 
 function App() {
   const { checkAuth, isCheckingAuth } = useAuthStore();
@@ -62,7 +63,8 @@ function App() {
             <Route path="history" element={<DecisionHistory />} />
             <Route path="monitoring" element={<Monitoring />} />
             <Route path="settings" element={<Settings />} />
-             <Route path="sprint-analytics" element={<SprintAnalytics />} />
+            <Route path="sprint-analytics" element={<SprintAnalytics />} />
+            <Route path="team-roles" element={<TeamRoles />} />
           </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>
