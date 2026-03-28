@@ -26,6 +26,7 @@ import Monitoring from './pages/Dashboard/Monitoring';
 import Settings from './pages/Dashboard/Settings';
 import SprintAnalytics from './pages/Dashboard/SprintAnalytics';
 import TeamRoles from './pages/Dashboard/TeamRoles';
+import SprintPredictor from './pages/Dashboard/SprintPredictor';
 
 function App() {
   const { checkAuth, isCheckingAuth } = useAuthStore();
@@ -65,6 +66,7 @@ function App() {
             <Route path="settings" element={<Settings />} />
             <Route path="sprint-analytics" element={<SprintAnalytics />} />
             <Route path="team-roles" element={<TeamRoles />} />
+            <Route path="sprint-predictor" element={<SprintPredictor />} />
           </Route>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>

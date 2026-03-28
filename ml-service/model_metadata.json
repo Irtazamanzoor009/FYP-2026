@@ -1,0 +1,26 @@
+{
+  "features": [
+    "velocity_ratio",
+    "completion_pct",
+    "days_elapsed_ratio",
+    "overloaded_members_ratio",
+    "blocked_tasks_ratio",
+    "overdue_tasks_ratio",
+    "scope_ratio",
+    "high_priority_incomplete_ratio"
+  ],
+  "accuracy": 0.9804,
+  "cv_accuracy": 0.9755,
+  "cv_std": 0.0164,
+  "n_estimators": 200,
+  "feature_importance": {
+    "velocity_ratio": 0.5117,
+    "overloaded_members_ratio": 0.1688,
+    "overdue_tasks_ratio": 0.1089,
+    "blocked_tasks_ratio": 0.0815,
+    "completion_pct": 0.0565,
+    "high_priority_incomplete_ratio": 0.036,
+    "days_elapsed_ratio": 0.0248,
+    "scope_ratio": 0.0118
+  }
+}

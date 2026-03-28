@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Lightbulb, ShieldAlert, History, BarChart3,
-    LogOut, Settings2, Bot, X, Sparkles, TrendingUp, Users
+    LogOut, Settings2, Bot, X, Sparkles, TrendingUp, Users, BrainCircuit
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import LogoutModal from '../../components/LogoutModal';
@@ -15,6 +15,7 @@ const menuItems = [
     { name: 'Monitoring', icon: BarChart3, path: '/dashboard/monitoring' },
     { name: 'Sprint Analytics', icon: TrendingUp, path: '/dashboard/sprint-analytics' },
     { name: 'Team Roles', icon: Users, path: '/dashboard/team-roles' },
+    { name: 'Sprint Predictor', icon: BrainCircuit, path: '/dashboard/sprint-predictor' },
 ];
 
 const Sidebar = ({ isOpen, toggleSidebar, toggleChat }) => {

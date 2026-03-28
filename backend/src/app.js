@@ -14,6 +14,7 @@ const riskRoutes = require('./routes/riskRoutes');
 const decisionRoutes = require('./routes/decisionRoutes');
 const monitoringRoutes = require('./routes/monitoringRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const mlRoutes = require('./routes/mlRoutes');
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use('/api/risk', riskRoutes);
 app.use('/api/decisions', decisionRoutes);
 app.use('/api/monitoring', monitoringRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/ml', mlRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

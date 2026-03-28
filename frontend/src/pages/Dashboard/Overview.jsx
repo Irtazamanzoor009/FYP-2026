@@ -8,10 +8,13 @@ import {
     ChevronRight,
     UserPlus,
     Shield,
-    RefreshCw
+    RefreshCw,
+    BrainCircuit
 } from 'lucide-react';
 import useOverviewStore from '../../store/overviewStore';
 import useAuthStore from '../../store/authStore';
+import useMLStore from '../../store/mlStore';
+import { useNavigate } from 'react-router-dom';
 
 // ─────────────────────────────────────────
 // HELPER: Get icon for action type
@@ -56,13 +59,22 @@ const SkeletonCard = ({ className = '' }) => (
     </div>
 );
 
+const getProbabilityColor = (prob) => {
+    if (prob >= 70) return '#18bc9c';
+    if (prob >= 40) return '#f1c40f';
+    return '#e74c3c';
+};
+
 const Overview = () => {
-    const { overviewData, isLoading, error, fetchOverview } = useOverviewStore();
+    const { overviewData, isLoading, error, fetchOverview, forceRefreshTrigger } = useOverviewStore();
     const { selectedProject } = useAuthStore();
+
+    const { prediction, fetchPrediction } = useMLStore();
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchOverview();
-    }, [selectedProject?.key]);
+    }, [selectedProject?.key, forceRefreshTrigger]);
 
     // ── Loading State ──
     if (isLoading && !overviewData) {
@@ -164,10 +176,10 @@ const Overview = () => {
             )}
 
             {/* ── TOP ROW: HEALTH SCORE + AI ACTIONS ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                 {/* Sprint Health Gauge */}
-                <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
                         Sprint Health Score
                     </h3>
@@ -213,59 +225,140 @@ const Overview = () => {
                     )}
                 </div>
 
-                {/* AI Action Center */}
-                <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                    <div className="flex items-center gap-2 mb-6">
-                        <Zap size={18} className="text-[#18bc9c]" />
-                        <h3 className="font-bold text-[#2c3e50]">
-                            AI Action Center: Top Priorities
-                        </h3>
-                    </div>
-
-                    <div className="space-y-3 flex-1">
-                        {topActions && topActions.length > 0 ? (
-                            topActions.map((action, index) => {
-                                const IconComponent = getActionIcon(action.type);
-                                return (
-                                    <div
-                                        key={index}
-                                        className="group flex items-center justify-between p-4 rounded-xl border border-gray-50 bg-gray-50/50 hover:bg-white hover:border-[#18bc9c]/30 hover:shadow-md transition-all cursor-pointer"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`p-2 rounded-lg ${getActionColor(action.priority)}`}>
-                                                <IconComponent size={20} />
-                                            </div>
-                                            <div>
-                                                <h4 className="text-sm font-bold text-[#2c3e50]">
-                                                    {action.task}
-                                                </h4>
-                                                <p className="text-xs text-gray-500">
-                                                    {action.desc}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <ChevronRight
-                                            size={18}
-                                            className="text-gray-300 group-hover:text-[#18bc9c] transition-all shrink-0"
-                                        />
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-32 text-gray-400">
-                                <CheckCircle2 size={32} className="mb-2 text-[#18bc9c]" />
-                                <p className="text-sm font-medium">No critical actions needed</p>
-                                <p className="text-xs">Sprint is on track</p>
+                {/* ML Predictor Widget */}
+                {prediction ? (
+                    <div
+                        className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-[#18bc9c]/30 transition-all group flex flex-col justify-between"
+                        onClick={() => navigate('/dashboard/sprint-predictor')}
+                    >
+                        <div>
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="p-2 bg-[#18bc9c]/10 rounded-xl">
+                                    <BrainCircuit size={18} className="text-[#18bc9c]" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                        ML Sprint Predictor
+                                    </p>
+                                    <p className="text-xs font-bold text-gray-500">
+                                        Random Forest + SHAP
+                                    </p>
+                                </div>
+                                <span className={`ml-auto text-[9px] font-black px-2 py-0.5 rounded-full ${prediction.source === 'ml_model'
+                                    ? 'bg-[#18bc9c]/10 text-[#18bc9c]'
+                                    : 'bg-yellow-50 text-yellow-600'
+                                    }`}>
+                                    {prediction.source === 'ml_model' ? 'ML' : 'Rule-Based'}
+                                </span>
                             </div>
-                        )}
-                    </div>
 
-                    {cachedAt && (
-                        <p className="text-[10px] text-gray-400 mt-4 text-right">
-                            Last updated: {new Date(cachedAt).toLocaleTimeString()}
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <p
+                                        className="text-5xl font-black"
+                                        style={{ color: getProbabilityColor(prediction.success_probability) }}
+                                    >
+                                        {prediction.success_probability}%
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        Success Probability
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm font-black"
+                                        style={{ color: getProbabilityColor(prediction.success_probability) }}
+                                    >
+                                        {prediction.outcome}
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        Confidence: {prediction.confidence}%
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Top factor */}
+                            {prediction.factors?.[0] && (
+                                <div className="bg-gray-50 rounded-xl p-3">
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">
+                                        Top Risk Factor
+                                    </p>
+                                    <p className="text-xs font-bold text-[#2c3e50]">
+                                        {prediction.factors[0].label}
+                                        <span className="text-red-500 ml-2">
+                                            -{prediction.factors[0].impact_percent.toFixed(1)}%
+                                        </span>
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <p className="text-[10px] text-[#18bc9c] mt-4 font-bold group-hover:underline">
+                            View full SHAP analysis →
                         </p>
+                    </div>
+                ) : (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center">
+                        <div className="text-center">
+                            <BrainCircuit size={32} className="text-gray-300 mx-auto mb-3" />
+                            <p className="text-sm text-gray-400">ML Predictor Loading...</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+
+            {/* AI Action Center */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                <div className="flex items-center gap-2 mb-6">
+                    <Zap size={18} className="text-[#18bc9c]" />
+                    <h3 className="font-bold text-[#2c3e50]">
+                        AI Action Center: Top Priorities
+                    </h3>
+                </div>
+
+                <div className="space-y-3 flex-1">
+                    {topActions && topActions.length > 0 ? (
+                        topActions.map((action, index) => {
+                            const IconComponent = getActionIcon(action.type);
+                            return (
+                                <div
+                                    key={index}
+                                    className="group flex items-center justify-between p-4 rounded-xl border border-gray-50 bg-gray-50/50 hover:bg-white hover:border-[#18bc9c]/30 hover:shadow-md transition-all cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-2 rounded-lg ${getActionColor(action.priority)}`}>
+                                            <IconComponent size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-[#2c3e50]">
+                                                {action.task}
+                                            </h4>
+                                            <p className="text-xs text-gray-500">
+                                                {action.desc}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight
+                                        size={18}
+                                        className="text-gray-300 group-hover:text-[#18bc9c] transition-all shrink-0"
+                                    />
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                            <CheckCircle2 size={32} className="mb-2 text-[#18bc9c]" />
+                            <p className="text-sm font-medium">No critical actions needed</p>
+                            <p className="text-xs">Sprint is on track</p>
+                        </div>
                     )}
                 </div>
+
+                {cachedAt && (
+                    <p className="text-[10px] text-gray-400 mt-4 text-right">
+                        Last updated: {new Date(cachedAt).toLocaleTimeString()}
+                    </p>
+                )}
             </div>
 
             {/* ── CHARTS ROW: WORKLOAD + BURNDOWN ── */}
@@ -401,9 +494,13 @@ const Overview = () => {
                         </p>
                     )}
                 </div>
+
+
+
             </div>
 
-        </div>
+
+        </div >
     );
 };
 

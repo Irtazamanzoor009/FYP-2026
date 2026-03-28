@@ -10,6 +10,7 @@ const useOverviewStore = create((set, get) => ({
     lastFetchedAt: null,
     error: null,
     isLoadingHistory: false,
+    forceRefreshTrigger: 0,
 
     // Fetch overview data (smart — uses cache if fresh)
     fetchOverview: async (forceRefresh = false) => {
@@ -114,7 +115,13 @@ const useOverviewStore = create((set, get) => ({
         sprintHistory: null,
         lastFetchedAt: null,
         error: null
-    })
+    }),
+
+    triggerRefresh: () => set(state => ({
+        overviewData: null,
+        lastFetchedAt: null,
+        forceRefreshTrigger: state.forceRefreshTrigger + 1
+    })),
 }));
 
 export default useOverviewStore;

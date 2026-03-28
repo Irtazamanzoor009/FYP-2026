@@ -8,6 +8,8 @@ const useTeamRolesStore = create((set, get) => ({
     isSaving: false,
 
     fetchTeamRoles: async () => {
+        const state = get();
+        if (state.isLoading || state.teamMembers.length > 0) return;
         set({ isLoading: true });
         try {
             const res = await API.get('/jira/team-roles');

@@ -1,0 +1,43 @@
+PS D:\FYP\FYP 2026\ml-service> python .\generate_data.py
+Generating sprint training data...
+Total sprints: 1020
+Success rate: 27.2%
+Features: ['sprint_id', 'velocity_ratio', 'completion_pct', 'days_elapsed_ratio', 'overloaded_members_ratio', 'blocked_tasks_ratio', 'overdue_tasks_ratio', 'scope_ratio', 'high_priority_incomplete_ratio', 'success']
+Saved to sprint_training_data.csv ✅
+PS D:\FYP\FYP 2026\ml-service> python train.py
+Loading training data...
+Dataset: 1020 sprints
+Success: 277 (27.2%)
+Failure: 743 (72.8%)
+
+Training Random Forest...
+
+Test Accuracy: 98.0%
+Cross-validation: 97.5% (+/- 1.6%)
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Failure       0.97      1.00      0.99       149
+     Success       1.00      0.93      0.96        55
+
+    accuracy                           0.98       204
+   macro avg       0.99      0.96      0.97       204
+weighted avg       0.98      0.98      0.98       204
+
+
+Feature Importance:
+  velocity_ratio                           ████████████████████ 0.512
+  overloaded_members_ratio                 ██████ 0.169
+  overdue_tasks_ratio                      ████ 0.109
+  blocked_tasks_ratio                      ███ 0.081
+  completion_pct                           ██ 0.057
+  high_priority_incomplete_ratio           █ 0.036
+  days_elapsed_ratio                        0.025
+  scope_ratio                               0.012
+
+Model saved to sprint_model.pkl ✅
+Metadata saved to model_metadata.json ✅
+
+Final model accuracy: 98.0%
+PS D:\FYP\FYP 2026\ml-service>   

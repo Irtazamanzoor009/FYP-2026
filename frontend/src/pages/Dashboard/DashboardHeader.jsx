@@ -15,7 +15,7 @@ const DashboardHeader = () => {
         user
     } = useAuthStore();
 
-    const { clearOverview } = useOverviewStore();
+    const { clearOverview, triggerRefresh } = useOverviewStore();
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isMobileExpanded, setIsMobileExpanded] = useState(false);
@@ -39,8 +39,7 @@ const DashboardHeader = () => {
         const tid = toast.loading('Syncing with Jira...');
         const res = await syncJiraData();
         if (res.success) {
-            // Clear cached overview so next visit fetches fresh
-            clearOverview();
+            triggerRefresh();
             toast.success('Data updated!', { id: tid });
         } else {
             toast.error('Sync failed', { id: tid });

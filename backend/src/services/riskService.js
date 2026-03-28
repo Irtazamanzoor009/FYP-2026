@@ -3,6 +3,7 @@ const SprintCache = require('../models/SprintCache');
 const WorkspaceConfig = require('../models/WorkspaceConfig');
 const { GoogleGenAI } = require('@google/genai');
 const { log, error } = require('../utils/logger');
+const { calculateSprintProbability } = require('../utils/probabilityUtils');
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -71,81 +72,7 @@ const getUserData = async (userId) => {
 // STEP 1: Calculate sprint success probability
 // ─────────────────────────────────────────
 const calculateSprintSuccessProbability = (sprintCache) => {
-    const {
-        activeSprint,
-        teamWorkload,
-        averageVelocity
-    } = sprintCache;
-
-    const today = new Date();
-    const start = new Date(activeSprint.startDate);
-    const end = new Date(activeSprint.endDate);
-
-    const totalDays = Math.max(
-        Math.ceil((end - start) / (1000 * 60 * 60 * 24)), 1
-    );
-    const daysElapsed = Math.max(
-        Math.ceil((today - start) / (1000 * 60 * 60 * 24)), 1
-    );
-    const daysLeft = Math.max(totalDays - daysElapsed, 0);
-
-    const remaining = activeSprint.totalStoryPoints -
-        activeSprint.completedStoryPoints;
-
-    // Factor 1: Velocity feasibility (0-40)
-    const currentDailyVelocity = daysElapsed > 0
-        ? activeSprint.completedStoryPoints / daysElapsed
-        : 0;
-    const requiredDailyVelocity = daysLeft > 0
-        ? remaining / daysLeft
-        : 999;
-    const velocityRatio = requiredDailyVelocity > 0
-        ? currentDailyVelocity / requiredDailyVelocity
-        : 1;
-    const velocityScore = Math.min(velocityRatio * 40, 40);
-
-    // Factor 2: Team capacity (0-30)
-    const overloadedCount = teamWorkload.filter(
-        m => m.status === 'Overloaded'
-    ).length;
-    const totalMembers = teamWorkload.length;
-    const healthyRatio = totalMembers > 0
-        ? (totalMembers - overloadedCount) / totalMembers
-        : 1;
-    const teamScore = healthyRatio * 30;
-
-    // Factor 3: Risk indicators (0-30)
-    const issues = activeSprint.issues;
-    const blockedCount = issues.filter(i => i.isBlocked).length;
-    const overdueCount = issues.filter(i => i.isOverdue).length;
-    const totalIssues = issues.length;
-    const riskRatio = totalIssues > 0
-        ? 1 - ((blockedCount + overdueCount) / totalIssues)
-        : 1;
-    const riskScore = riskRatio * 30;
-
-    const probability = Math.min(
-        Math.max(
-            Math.round(velocityScore + teamScore + riskScore), 0
-        ), 100
-    );
-
-    return {
-        probability,
-        factors: {
-            velocityScore: Math.round(velocityScore),
-            teamScore: Math.round(teamScore),
-            riskScore: Math.round(riskScore),
-            currentDailyVelocity: Math.round(
-                currentDailyVelocity * 10
-            ) / 10,
-            requiredDailyVelocity: Math.round(
-                requiredDailyVelocity * 10
-            ) / 10,
-            daysLeft,
-            remainingPoints: remaining
-        }
-    };
+    return calculateSprintProbability(sprintCache);
 };
 
 // ─────────────────────────────────────────
