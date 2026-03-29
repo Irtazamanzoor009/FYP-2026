@@ -1,0 +1,59 @@
+{
+  "features": [
+    "task_type_numeric",
+    "priority_numeric",
+    "story_points",
+    "word_count"
+  ],
+  "target": "actual_days",
+  "mae": 1.1754,
+  "rmse": 1.6227,
+  "r2": 0.4722,
+  "cv_mae": 1.1578,
+  "feature_importance": {
+    "story_points": 0.5906,
+    "task_type_numeric": 0.2133,
+    "priority_numeric": 0.1629,
+    "word_count": 0.0332
+  },
+  "task_type_encoding": {
+    "backend": 0,
+    "frontend": 1,
+    "testing": 2,
+    "devops": 3,
+    "general": 4
+  },
+  "priority_encoding": {
+    "Highest": 5,
+    "High": 4,
+    "Medium": 3,
+    "Low": 2,
+    "Lowest": 1
+  },
+  "duration_stats_by_type": {
+    "mean": {
+      "backend": 5.26,
+      "frontend": 4.25,
+      "general": 3.7,
+      "testing": 2.66
+    },
+    "std": {
+      "backend": 2.83,
+      "frontend": 2.44,
+      "general": 2.23,
+      "testing": 1.42
+    },
+    "min": {
+      "backend": 1.0,
+      "frontend": 1.0,
+      "general": 0.7,
+      "testing": 0.7
+    },
+    "max": {
+      "backend": 20.4,
+      "frontend": 14.7,
+      "general": 13.2,
+      "testing": 8.1
+    }
+  }
+}

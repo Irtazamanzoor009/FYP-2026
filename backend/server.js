@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 8000;
         // Initialize Socket.io on same server
         initSocket(server);
 
-        scheduleCronJobs();
+        // scheduleCronJobs();
         log('⚙️  Cron jobs scheduled')
 
         server.listen(PORT, () => {

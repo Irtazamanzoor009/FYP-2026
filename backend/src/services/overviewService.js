@@ -707,6 +707,27 @@ const handleSprintTransition = async (
     );
 
     log(`✅ Sprint transition complete. Old data archived.`);
+
+    // Trigger personal anomaly model retraining
+    try {
+        const { retrainPersonalModel } = require('./anomalyService');
+        await retrainPersonalModel(userId);
+    } catch (retrainErr) {
+        error('⚠️ Anomaly retraining failed (non-critical):', retrainErr.message);
+    }
+
+    // Trigger duration model retraining with real sprint data
+    try {
+        const { captureAndRetrain } = require('./durationRetrainingService');
+        // previousSprintId is the ID of the sprint that just ended
+        // Make sure this variable exists in your handleSprintTransition function
+        await captureAndRetrain(userId, oldSprintId);
+    } catch (retrainErr) {
+        error(
+            '⚠️ Duration retraining failed (non-critical):',
+            retrainErr.message
+        );
+    }
 };
 
 module.exports = {

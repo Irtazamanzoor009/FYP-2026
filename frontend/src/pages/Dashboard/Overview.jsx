@@ -68,12 +68,12 @@ const getProbabilityColor = (prob) => {
 const Overview = () => {
     const { overviewData, isLoading, error, fetchOverview, forceRefreshTrigger } = useOverviewStore();
     const { selectedProject } = useAuthStore();
-
-    const { prediction, fetchPrediction } = useMLStore();
+    const { prediction, fetchPrediction, isLoading: mlLoading } = useMLStore();
     const navigate = useNavigate();
 
     useEffect(() => {
         fetchOverview();
+        fetchPrediction();
     }, [selectedProject?.key, forceRefreshTrigger]);
 
     // ── Loading State ──

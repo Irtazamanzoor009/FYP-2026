@@ -11,11 +11,13 @@ import {
     MoreHorizontal,
     Loader2,
     RefreshCw,
-    Minus
+    Minus,
+    ShieldAlert, CheckCircle2, AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useMonitoringStore from '../../store/monitoringStore';
 import useAuthStore from '../../store/authStore';
+import useSprintPlannerStore from '../../store/sprintPlannerStore';
 
 // ─────────────────────────────────────────
 // Alert severity colors
@@ -52,10 +54,15 @@ const Monitoring = () => {
 
     const { selectedProject, user } = useAuthStore();
     const [snoozeDropdown, setSnoozeDropdown] = useState(null);
+    const { anomalyResult, isCheckingAnomaly, checkAnomalies } = useSprintPlannerStore();
 
     useEffect(() => {
         fetchMonitoringData();
     }, [selectedProject?.key]);
+
+    useEffect(() => {
+        checkAnomalies();
+    }, []);
 
     const handleManualCheck = async () => {
         const tid = toast.loading('Running monitoring checks...');
@@ -162,10 +169,10 @@ const Monitoring = () => {
                             <div className="absolute flex flex-col items-center">
                                 <span className="text-4xl font-black text-[#2c3e50]">{prob}%</span>
                                 <div className={`flex items-center gap-1 text-[10px] font-bold ${failureProbability?.direction === 'up'
-                                        ? 'text-red-500'
-                                        : failureProbability?.direction === 'down'
-                                            ? 'text-[#18bc9c]'
-                                            : 'text-gray-400'
+                                    ? 'text-red-500'
+                                    : failureProbability?.direction === 'down'
+                                        ? 'text-[#18bc9c]'
+                                        : 'text-gray-400'
                                     }`}>
                                     {failureProbability?.direction === 'up'
                                         ? <TrendingUp size={12} />
@@ -205,7 +212,72 @@ const Monitoring = () => {
                             </p>
                         )}
                     </div>
+
+                    {/* anomoly detection section */}
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-[#2c3e50] flex items-center gap-2">
+                                <ShieldAlert size={16} className="text-[#18bc9c]" />
+                                Productivity Anomaly Detection
+                            </h3>
+                            <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${anomalyResult?.model_type === 'personal'
+                                ? 'bg-[#18bc9c]/10 text-[#18bc9c]'
+                                : 'bg-yellow-50 text-yellow-600'
+                                }`}>
+                                {anomalyResult?.model_type === 'personal'
+                                    ? '🎯 Personal Model'
+                                    : '🌍 Global Baseline'
+                                }
+                            </span>
+                        </div>
+
+                        {isCheckingAnomaly ? (
+                            <div className="flex items-center gap-2 text-sm text-gray-400">
+                                <Loader2 size={14} className="animate-spin" />
+                                Running anomaly analysis...
+                            </div>
+                        ) : anomalyResult ? (
+                            <div className="space-y-3">
+                                <div className={`flex items-start gap-3 p-4 rounded-xl ${anomalyResult.is_anomaly
+                                    ? 'bg-red-50 border border-red-100'
+                                    : 'bg-green-50 border border-green-100'
+                                    }`}>
+                                    {anomalyResult.is_anomaly
+                                        ? <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                                        : <CheckCircle2 size={18} className="text-green-500 shrink-0 mt-0.5" />
+                                    }
+                                    <div>
+                                        <p className={`text-sm font-bold ${anomalyResult.is_anomaly ? 'text-red-700' : 'text-green-700'
+                                            }`}>
+                                            {anomalyResult.is_anomaly
+                                                ? 'Anomalous Behavior Detected'
+                                                : 'Sprint Behavior Normal'
+                                            }
+                                        </p>
+                                        <p className={`text-xs mt-1 ${anomalyResult.is_anomaly ? 'text-red-600' : 'text-green-600'
+                                            }`}>
+                                            {anomalyResult.description ||
+                                                (anomalyResult.is_anomaly
+                                                    ? 'Sprint metrics deviate from normal patterns.'
+                                                    : 'All sprint metrics are within expected ranges.'
+                                                )
+                                            }
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 mt-2">
+                                            Anomaly score: {(anomalyResult.anomaly_score * 100).toFixed(1)}%
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-400">
+                                No anomaly data available.
+                            </p>
+                        )}
+                    </div>
                 </div>
+
+
 
                 {/* Live Agent Feed */}
                 <div className="lg:col-span-2 space-y-6">
