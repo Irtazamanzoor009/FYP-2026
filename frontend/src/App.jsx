@@ -29,6 +29,7 @@ import TeamRoles from './pages/Dashboard/TeamRoles';
 import SprintPredictor from './pages/Dashboard/SprintPredictor';
 import SprintPlanner from './pages/Dashboard/SprintPlanner';
 import SprintHistory from './pages/Dashboard/SprintHistory';
+import LandingPage from './pages/LandingPage';
 
 function App() {
   const { checkAuth, isCheckingAuth } = useAuthStore();
@@ -46,6 +47,7 @@ function App() {
       <Toaster position="top-center" />
       <Routes>
 
+        <Route path="/" element={<LandingPage />} />
         <Route element={<PublicRoutes />}>
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
@@ -73,7 +75,7 @@ function App() {
             <Route path="sprint-history" element={<SprintHistory />} />
 
           </Route>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* <Route path="/" element={<Navigate to="/dashboard" replace />} /> */}
         </Route>
 
 
