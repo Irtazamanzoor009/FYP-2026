@@ -71,9 +71,22 @@ const Overview = () => {
     const { prediction, fetchPrediction, isLoading: mlLoading } = useMLStore();
     const navigate = useNavigate();
 
+    // useEffect(() => {
+    //     fetchOverview();
+    //     fetchPrediction();
+    // }, [selectedProject?.key, forceRefreshTrigger]);
+
     useEffect(() => {
-        fetchOverview();
-        fetchPrediction();
+        const loadOverview = async () => {
+            await fetchOverview();
+            fetchPrediction();
+
+            setTimeout(async () => {
+                await fetchOverview();
+                fetchPrediction();
+            }, 1500);
+        };
+        loadOverview();
     }, [selectedProject?.key, forceRefreshTrigger]);
 
     // ── Loading State ──
@@ -280,12 +293,12 @@ const Overview = () => {
                             {prediction.factors?.[0] && (
                                 <div className="bg-gray-50 rounded-xl p-3">
                                     <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">
-                                        Top Risk Factor
+                                        TOP INFLUENCING FACTOR
                                     </p>
                                     <p className="text-xs font-bold text-[#2c3e50]">
                                         {prediction.factors[0].label}
-                                        <span className="text-red-500 ml-2">
-                                            -{prediction.factors[0].impact_percent.toFixed(1)}%
+                                        <span className="text-[#18bc9c] ml-2">
+                                            {prediction.factors[0].impact_percent.toFixed(1)}%
                                         </span>
                                     </p>
                                 </div>

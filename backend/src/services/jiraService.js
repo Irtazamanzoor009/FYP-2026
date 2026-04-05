@@ -258,7 +258,7 @@ const fetchActiveSprintIssues = async (userId) => {
 
     // Get issues for active sprint
     const issuesRes = await client.get(
-        `/rest/agile/1.0/sprint/${activeSprint.id}/issue?maxResults=100&fields=summary,assignee,status,priority,duedate,issuelinks,${spField}`
+        `/rest/agile/1.0/sprint/${activeSprint.id}/issue?maxResults=100&fields=summary,assignee,status,priority,duedate,issuelinks,${spField}&expand=issuelinks`
     );
 
     const rawIssues = issuesRes.data.issues || [];
@@ -268,12 +268,32 @@ const fetchActiveSprintIssues = async (userId) => {
         const fields = issue.fields;
 
         // Detect if blocked
-        const isBlocked = fields.issuelinks?.some(link =>
-            link.type?.inward === 'is blocked by' && link.inwardIssue
-        );
+        // const isBlocked = fields.issuelinks?.some(link =>
+        //     link.type?.inward === 'is blocked by' && link.inwardIssue
+        // );
+
+        const isBlocked = fields.issuelinks?.some(link => {
+            if (link.type?.inward !== 'is blocked by') return false;
+            if (!link.inwardIssue) return false;
+            // Only count as blocked if the blocking issue is NOT done
+            const blockerStatus = link.inwardIssue.fields?.status?.statusCategory?.key;
+            return blockerStatus !== 'done';
+        }) && fields.status?.statusCategory?.key !== 'done';
+
+        // const blockedBy = fields.issuelinks
+        //     ?.filter(link => link.type?.inward === 'is blocked by' && link.inwardIssue)
+        //     ?.map(link => ({
+        //         key: link.inwardIssue.key,
+        //         summary: link.inwardIssue.fields?.summary,
+        //         status: link.inwardIssue.fields?.status?.name
+        //     })) || [];
 
         const blockedBy = fields.issuelinks
-            ?.filter(link => link.type?.inward === 'is blocked by' && link.inwardIssue)
+            ?.filter(link =>
+                link.type?.inward === 'is blocked by' &&
+                link.inwardIssue &&
+                link.inwardIssue.fields?.status?.statusCategory?.key !== 'done'
+            )
             ?.map(link => ({
                 key: link.inwardIssue.key,
                 summary: link.inwardIssue.fields?.summary,
