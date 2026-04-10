@@ -8,6 +8,7 @@ const ML_SERVICE_URL = process.env.ML_SERVICE_URL ||
 // Call FastAPI ML service
 // ─────────────────────────────────────────
 const predictSprintOutcome = async (sprintCache) => {
+    console.log("Sprint Cache: ", sprintCache);
     const { activeSprint, teamWorkload, averageVelocity } = sprintCache;
 
     const today = new Date();
@@ -20,6 +21,34 @@ const predictSprintOutcome = async (sprintCache) => {
         Math.ceil((today - start) / (1000 * 60 * 60 * 24)), 1
     );
     const daysLeft = Math.max(totalDays - daysElapsed, 0);
+    const daysElapsedRatio = daysElapsed / totalDays;
+
+    // ── ADD THIS: Grace period check ──
+    // In the first 20% of sprint (day 1-3 of 14-day sprint)
+    // velocity = 0 is NORMAL — do not send to ML model
+    const isGracePeriod = daysElapsedRatio < 0.20
+
+    if (isGracePeriod) {
+        // Return a neutral prediction — sprint just started
+        return {
+            success_probability: 75,   // neutral optimistic
+            failure_probability: 25,
+            confidence: 50,
+            outcome: 'SPRINT JUST STARTED',
+            outcome_color: 'green',
+            prediction: 1,
+            factors: [],
+            recommendations: [{
+                action: 'Sprint is in early phase. Check back after day 3 for meaningful predictions.',
+                impact: 'ML predictions stabilize after 20% sprint completion',
+                priority: 'LOW'
+            }],
+            grace_period: true,
+            grace_period_message: `Day ${daysElapsed} of ${totalDays} — predictions activate after day ${Math.ceil(totalDays * 0.2)}`,
+            source: 'grace_period',
+            sprint_name: activeSprint?.name,
+        };
+    }
 
     const issues = activeSprint.issues;
     const totalIssues = Math.max(issues.length, 1);
@@ -40,13 +69,17 @@ const predictSprintOutcome = async (sprintCache) => {
     const completedPoints = activeSprint.completedStoryPoints;
     const totalPoints = activeSprint.totalStoryPoints;
 
-    const currentVelocity = daysElapsed > 0
-        ? completedPoints / daysElapsed : 0;
-    const remaining = totalPoints - completedPoints;
-    const requiredVelocity = daysLeft > 0
-        ? remaining / daysLeft : 999;
-    const velocityRatio = requiredVelocity > 0
-        ? Math.min(currentVelocity / requiredVelocity, 3.0) : 2.0;
+    let velocityRatio;
+    if (daysElapsed <= 2) {
+        velocityRatio = 1.0;
+    } else {
+        const currentVelocity = completedPoints / daysElapsed;
+        const remaining = totalPoints - completedPoints;
+        const requiredVelocity = daysLeft > 0 ? remaining / daysLeft : 999;
+        velocityRatio = requiredVelocity > 0
+            ? Math.min(currentVelocity / requiredVelocity, 3.0)
+            : 2.0;
+    }
 
     const overloadedCount = teamWorkload.filter(
         m => m.status === 'Overloaded'
@@ -96,6 +129,7 @@ const predictSprintOutcome = async (sprintCache) => {
         }
 
         const result = await response.json();
+        // console.log("Result: ", result);
         log(`✅ ML prediction: ${result.outcome} (${result.success_probability}%)`);
 
         return {

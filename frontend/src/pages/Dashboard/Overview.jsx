@@ -259,38 +259,56 @@ const Overview = () => {
                                 </div>
                                 <span className={`ml-auto text-[9px] font-black px-2 py-0.5 rounded-full ${prediction.source === 'ml_model'
                                     ? 'bg-[#18bc9c]/10 text-[#18bc9c]'
-                                    : 'bg-yellow-50 text-yellow-600'
+                                    : prediction.source === 'grace_period'
+                                        ? 'bg-blue-50 text-blue-500'
+                                        : 'bg-yellow-50 text-yellow-600'
                                     }`}>
-                                    {prediction.source === 'ml_model' ? 'ML' : 'Rule-Based'}
+                                    {prediction.source === 'ml_model'
+                                        ? 'ML'
+                                        : prediction.source === 'grace_period'
+                                            ? 'Early Sprint'
+                                            : 'Rule-Based'
+                                    }
                                 </span>
                             </div>
 
                             <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <p
-                                        className="text-5xl font-black"
-                                        style={{ color: getProbabilityColor(prediction.success_probability) }}
-                                    >
-                                        {prediction.success_probability}%
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        Success Probability
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-black"
-                                        style={{ color: getProbabilityColor(prediction.success_probability) }}
-                                    >
-                                        {prediction.outcome}
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        Confidence: {prediction.confidence}%
-                                    </p>
-                                </div>
+                                {prediction.grace_period ? (
+                                    <div className="w-full text-center py-2">
+                                        <p className="text-4xl font-black text-[#2c3e50]">—</p>
+                                        <p className="text-xs text-[#18bc9c] font-bold mt-2">
+                                            {prediction.grace_period_message}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <p
+                                                className="text-5xl font-black"
+                                                style={{ color: getProbabilityColor(prediction.success_probability) }}
+                                            >
+                                                {prediction.success_probability}%
+                                            </p>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                Success Probability
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-black"
+                                                style={{ color: getProbabilityColor(prediction.success_probability) }}
+                                            >
+                                                {prediction.outcome}
+                                            </p>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                Confidence: {prediction.confidence}%
+                                            </p>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             {/* Top factor */}
-                            {prediction.factors?.[0] && (
+                            {!prediction.grace_period && prediction.factors?.[0] && (
                                 <div className="bg-gray-50 rounded-xl p-3">
                                     <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">
                                         TOP INFLUENCING FACTOR

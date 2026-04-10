@@ -19,6 +19,7 @@ const useMLStore = create((set, get) => ({
         set({ isLoading: true });
         try {
             const res = await API.post('/ml/predict');
+            console.log("Res data: ", res.data.data);
             set({
                 prediction: res.data.data,
                 isLoading: false,
