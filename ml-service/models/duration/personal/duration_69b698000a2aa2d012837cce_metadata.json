@@ -1,14 +1,13 @@
 {
   "user_id": "69b698000a2aa2d012837cce",
-  "mae": 1.7461,
-  "n_samples": 13,
-  "total_training_samples": 1062,
+  "mae": 1.3753,
+  "n_samples": 4,
+  "total_training_samples": 972,
   "model_type": "personal",
   "duration_stats_by_type": {
     "std": {
-      "backend": 3.9193253387682825,
+      "backend": 0.0,
       "frontend": 1.2,
-      "general": 0.0,
       "testing": 1.2
     }
   }

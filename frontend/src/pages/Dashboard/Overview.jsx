@@ -253,8 +253,12 @@ const Overview = () => {
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                                         ML Sprint Predictor
                                     </p>
-                                    <p className="text-xs font-bold text-gray-500">
+                                    {/* <p className="text-xs font-bold text-gray-500">
                                         Random Forest + SHAP
+                                    </p> */}
+                                    <p className="text-xs font-bold text-gray-500">
+                                        Pattern-based prediction from historical sprint data.
+
                                     </p>
                                 </div>
                                 <span className={`ml-auto text-[9px] font-black px-2 py-0.5 rounded-full ${prediction.source === 'ml_model'

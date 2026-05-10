@@ -41,7 +41,10 @@ const SprintHistory = () => {
             color: 'text-gray-400',
             bg: 'bg-gray-50'
         };
+        console.log("Predicted: ", predicted)
+        console.log("Actual: ", actual);
         const diff = Math.abs(predicted - actual) / predicted;
+        console.log("Diff: ", diff);
         if (diff <= 0.15) return {
             label: '✅ Accurate',
             color: 'text-green-600',
@@ -335,6 +338,7 @@ const SprintHistory = () => {
                                                         task.predictedDays,
                                                         task.actualDays
                                                     );
+                                                    // console.log("Acc: ", acc);
                                                     return (
                                                         <tr key={i}
                                                             className="border-t
