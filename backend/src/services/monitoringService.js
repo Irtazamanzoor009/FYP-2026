@@ -157,8 +157,10 @@ const runMonitoringChecks = async (userId) => {
 
     // ── Check 2: Workload overload ──
     checksRun++;
+    // console.log("Team WorkLoad: ", teamWorkload)
     const overloadedMembers = teamWorkload.filter(
-        m => m.rawPercentage > 90
+        m => m.workloadPercentage > 90 
+        // m => m.rawPercentage > 100 
     );
 
     for (const member of overloadedMembers) {
@@ -188,7 +190,8 @@ const runMonitoringChecks = async (userId) => {
     checksRun++;
     const criticalBlocked = issues.filter(
         i => i.isBlocked &&
-        (i.priority === 'Highest' || i.priority === 'High')
+        // (i.priority === 'Highest' || i.priority === 'High') 
+        i.status !== 'Done'
     );
 
     if (criticalBlocked.length > 0) {
@@ -399,8 +402,7 @@ const getMonitoringData = async (userId) => {
         })
     ]);
 
-    const currentProbability =
-        riskCache?.sprintSuccessProbability ?? 0;
+    const currentProbability = 100 - (riskCache?.sprintSuccessProbability ?? 0);
     const yesterdayProbability =
         yesterdaySnapshot?.probability ?? currentProbability;
     const trend = currentProbability - yesterdayProbability;
